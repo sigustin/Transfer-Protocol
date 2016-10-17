@@ -16,10 +16,11 @@ int main(int argc, char *argv[])
 	{
 		ERROR("Too few arguments");
 		fprintf(stderr, "\nReceiver program\nUsage :\n");
-		fprintf(stderr, "\receiver [options] hostname port\n");
+		fprintf(stderr, "\treceiver [options] hostname port\n");
 		fprintf(stderr, "\thostname :\tthe host IP to connect to\n");
-		fprintf(stderr, "\tport :\tthe port the messages are received from\n");
-		fprintf(stderr, "\toptions :\tf\tthe file which the messages have to be written to\n\n");
+		fprintf(stderr, "\tport :\t\tthe port the messages are received from\n");
+		fprintf(stderr, "\toptions :\t-f : the file which the messages have to be written to\n\n");
+		return EXIT_FAILURE;
 	}
 
 	char* fileToWrite = NULL;

@@ -18,8 +18,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "\nSender program\nUsage :\n");
 		fprintf(stderr, "\tsender [options] hostname port\n");
 		fprintf(stderr, "\thostname :\tthe host IP to send messages\n");
-		fprintf(stderr, "\tport :\tthe port the messages are sent to\n");
-		fprintf(stderr, "\toptions :\tf\tthe file which the messages have to be read from\n\n");
+		fprintf(stderr, "\tport :\t\tthe port the messages are sent to\n");
+		fprintf(stderr, "\toptions :\t-f : the file which the messages have to be read from\n\n");
+		return EXIT_FAILURE;
 	}
 
 	char* fileToSend = NULL;
