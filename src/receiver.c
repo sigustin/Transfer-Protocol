@@ -69,6 +69,15 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	//-------------- Connect socket after receiving the first packet --------------------
+	int err = connect_receiver_socket(sfd);
+	if (err == -1)
+	{
+		ERROR("Couldn't connect receiver to socket after receiving the first packet");
+		close(sfd);
+		return EXIT_FAILURE;
+	}
+
 	//=========== Main loop (receive and interpret packets and send acknowledments) ============
 
 	return EXIT_SUCCESS;
