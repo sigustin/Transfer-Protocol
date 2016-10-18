@@ -7,11 +7,13 @@
 #include <unistd.h>
 
 #include "defines.h"
+#include "createConnection.h"
 
 int main(int argc, char *argv[])
 {
 	fprintf(stderr, "Running sender\n");
 
+	//================== Check validity of the program's arguments =======================
 	if (argc < 3)
 	{
 		ERROR("Too few arguments");
@@ -23,6 +25,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	//===================== Get the program's arguments ==========================
 	char* fileToSend = NULL;
 
 	int opt;
@@ -47,6 +50,26 @@ int main(int argc, char *argv[])
 		ERROR("Wrong argument : the port must be an integer number");
 		return EXIT_FAILURE;
 	}
+
+	//======================= Create the connection =============================
+	//--------------- Resolve hostname ----------------------
+	struct sockaddr_in6 receiverAddress;
+	const char* errMsg = real_address(receiverHostname, &receiverAddress);
+	if (errMsg != NULL)
+	{
+		fprintf(stderr, "Couldn't resolve hostname %s :%s\n", receiverHostname, errMsg);
+		return EXIT_FAILURE;
+	}
+
+	//--------------- Create socket -----------------------
+	int sfd = create_sender_socket(&receiverAddress, port);
+	if (sfd < 0)
+	{
+		ERROR("Couldn't create socket");
+		return EXIT_FAILURE;
+	}
+
+	//=============== Main loop (prepare and send packets and receive acknowledments) =============
 
 	return EXIT_SUCCESS;
 }
