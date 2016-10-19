@@ -29,6 +29,8 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
    tv.tv_sec = 0;
    tv.tv_usec = 5000;
 
+   int bytesRead;
+
    while (true)
    {
       //--------------- Read input file ------------------
@@ -42,7 +44,21 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
       }
       else if (err > 0)
       {
-
+         bytesRead = read(inputFile, bufInput, MAX_PKT_SIZE);
+         if (bytesRead < 0)
+         {
+            perror("Couldn't read input file");
+            return RETURN_FAILURE;
+         }
+         else if (bytesRead == 0)
+         {
+            //Received EOF
+            return RETURN_SUCCESS;
+         }
+         else
+         {
+            //TODO
+         }
       }
 
       //---------------- Write socket ----------------------
@@ -70,7 +86,20 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
       }
       else if (err > 0)
       {
-
+         bytesRead = recvfrom(sfd, bufSocket, MAX_PKT_SIZE, 0, NULL, NULL);
+         if (bytesRead < 0)
+         {
+            perror("Couldn't receive data from socket");
+            return RETURN_FAILURE;
+         }
+         else if (bytesRead == 0)
+         {
+            //Received EOF from socket
+         }
+         else
+         {
+            //TODO
+         }
       }
    }
 
@@ -106,6 +135,8 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
    tv.tv_sec = 0;
    tv.tv_usec = 5000;
 
+   int bytesRead;
+
    while (true)
    {
       //------------------- Read socket ----------------------
@@ -119,7 +150,20 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
       }
       else if (err > 0)
       {
-
+         bytesRead = recvfrom(sfd, bufSocket, MAX_PKT_SIZE, 0, NULL, NULL);
+         if (bytesRead < 0)
+         {
+            perror("Couldn't read from socket");
+            return RETURN_FAILURE;
+         }
+         else if (bytesRead == 0)
+         {
+            //Received EOF from socket
+         }
+         else
+         {
+            //TODO
+         }
       }
 
       //------------------- Write output file -------------------------
@@ -133,7 +177,7 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
       }
       else if (err > 0)
       {
-
+         //TODO
       }
 
       //---------------------- Write socket (ack) ---------------------
@@ -147,7 +191,7 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
       }
       else if (err > 0)
       {
-
+         //TODO
       }
    }
 
