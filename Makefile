@@ -22,6 +22,9 @@ receiver.o : $(SRC)/receiver.c $(SRC)/defines.h
 createConnection.o : $(SRC)/createConnection.c
 	$(CC) $(CFLAGS) -c $(SRC)/createConnection.c
 
+readWriteLoop.o : $(SRC)/readWriteLoop.c
+	$(CC) $(CFLAGS) -c $(SRC)/readWriteLoop.c
+
 clean :
 	@rm -f *.o #-f prevents an error message to be displayed if no file were found to be deleted
 
