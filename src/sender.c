@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "defines.h"
 #include "createConnection.h"
@@ -26,14 +29,14 @@ int main(int argc, char *argv[])
 	}
 
 	//===================== Get the program's arguments ==========================
-	char* fileToSend = NULL;
+	char* fileToSendName = NULL;
 
 	int opt;
 	extern char* optarg;
 	while((opt = getopt(argc, argv, "f:")) != -1)
 	{
 		if (opt == 'f')
-			fileToSend = optarg;
+			fileToSendName = optarg;
 		else
 		{
 			ERROR("There was an error while getting the program's options");
@@ -69,8 +72,24 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	//=============== Main loop (prepare and send packets and receive acknowledments) =============
+	//================= Open file to send ==================================
+	int fileToSendFd = -1;
+	if (fileToSendName != NULL)
+	{
+		fileToSendFd = open(fileToSendName, O_RDONLY);
+		if (fileToSendFd < 0)
+		{
+			perror("Couldn't open file");
+			close(sfd);
+			return RETURN_FAILURE;
+		}
+	}
 
+	//=============== Main loop (prepare and send packets and receive acknowledgments) =============
+
+	//=================== Close all resources ===============================
+	if (fileToSendFd != -1)
+		close(fileToSendFd);
 	close(sfd);
 
 	return EXIT_SUCCESS;
