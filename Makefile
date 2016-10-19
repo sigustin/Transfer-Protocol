@@ -25,6 +25,9 @@ createConnection.o : $(SRC)/createConnection.c
 readWriteLoop.o : $(SRC)/readWriteLoop.c
 	$(CC) $(CFLAGS) -c $(SRC)/readWriteLoop.c
 
+packets.o : $(SRC)/packets.c
+	$(CC) $(CFLAGS) -c $(SRC)/packets.c $(LFLAGS)
+
 clean :
 	@rm -f *.o #-f prevents an error message to be displayed if no file were found to be deleted
 
