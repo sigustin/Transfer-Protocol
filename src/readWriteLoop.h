@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -13,6 +14,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
+
+#include "defines.h"
 
 ERR_CODE readWriteLoopSender(const int sfd, const int inputFile);
 ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile);

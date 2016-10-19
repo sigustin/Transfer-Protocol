@@ -18,7 +18,7 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
 
    fd_set inputFdSet, socketFdSet, copyFdSet;
    FD_ZERO(&inputFdSet);
-   FD_SET(inputFile, &fdSet);
+   FD_SET(inputFile, &inputFdSet);
 
    FD_ZERO(&socketFdSet);
    FD_SET(sfd, &socketFdSet);
