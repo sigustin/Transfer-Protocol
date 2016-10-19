@@ -80,5 +80,7 @@ int main(int argc, char *argv[])
 
 	//=========== Main loop (receive and interpret packets and send acknowledments) ============
 
+	close(sfd);
+
 	return EXIT_SUCCESS;
 }
