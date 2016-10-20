@@ -51,9 +51,9 @@ pkt_status_code pkt_decode(const uint8_t *data, const size_t len, pkt_t *pkt)
 	//Check for the consistency of the data
 	if (data == NULL)
 		return E_INCONSISTENT;
-	if (len < 12)
+	if (len < HEADER_SIZE)
 		return E_NOHEADER;
-	if (len-12 > MAX_PAYLOAD_SIZE)
+	if (len-HEADER_SIZE > MAX_PAYLOAD_SIZE)
 		return E_LENGTH;
 
 	//Extraction of the fields from array data and check for their consistency
@@ -66,7 +66,7 @@ pkt_status_code pkt_decode(const uint8_t *data, const size_t len, pkt_t *pkt)
 	uint8_t seqnum = data[1];
 
 	uint16_t payloadLength = getUInt16(&data[2]);
-	if (payloadLength != len-12)
+	if (payloadLength != len-HEADER_SIZE)
 		return E_LENGTH;
 
 	uint32_t timestamp = getUInt32(&data[4]);
@@ -102,11 +102,11 @@ pkt_status_code pkt_encode(const pkt_t* pkt, uint8_t *buf, size_t *len)
 	//Check for consistency of parameters
 	if (pkt == NULL)
 		return E_INCONSISTENT;
-	if (len == NULL || *len < 12)
+	if (len == NULL || *len < HEADER_SIZE)
 		return E_NOMEM;
 
 	//Check for length of buffer
-	if (*len < (size_t) pkt->payloadLength+12)
+	if (*len < (size_t) pkt->payloadLength+HEADER_SIZE)
 		return E_NOMEM;
 
 	//Fill up of the buffer
@@ -123,7 +123,7 @@ pkt_status_code pkt_encode(const pkt_t* pkt, uint8_t *buf, size_t *len)
 	uint32_t crc = crc32(0L, buf, pkt->payloadLength+8);
 	putUInt32(crc, &buf[pkt->payloadLength+8]);
 
-	*len = pkt->payloadLength+12;
+	*len = pkt->payloadLength+HEADER_SIZE;
 
 	return PKT_OK;
 }
