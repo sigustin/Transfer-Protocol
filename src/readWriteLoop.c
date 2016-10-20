@@ -102,6 +102,7 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
          else
          {
             //TODO
+            senderInterpretDataReceived(bufSocket, bytesRead);
          }
       }
    }
@@ -167,6 +168,7 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
          else
          {
             //TODO
+            receiverInterpretDataReceived(bufSocket, bytesRead);
          }
       }
 

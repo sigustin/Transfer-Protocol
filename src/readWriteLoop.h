@@ -16,6 +16,8 @@
 #include <netdb.h>
 
 #include "defines.h"
+#include "senderManagePackets.h"
+#include "receiverManagerPackets.h"
 
 ERR_CODE readWriteLoopSender(const int sfd, const int inputFile);
 ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile);
