@@ -38,7 +38,7 @@ typedef enum {
 	E_SEQNUM,       /* NumÃ©ro de sÃ©quence invalide */
 	E_NOMEM,        /* Pas assez de mÃ©moire */
 	E_NOHEADER,     /* Le paquet n'a pas de header (trop court) */
-	E_UNCONSISTENT, /* Le paquet est incohÃ©rent */
+	E_INCONSISTENT, /* Le paquet est incohÃ©rent */
 } pkt_status_code;
 
 

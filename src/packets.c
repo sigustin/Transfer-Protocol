@@ -50,7 +50,7 @@ pkt_status_code pkt_decode(const uint8_t *data, const size_t len, pkt_t *pkt)
 {
 	//Check for the consistency of the data
 	if (data == NULL)
-		return E_UNCONSISTENT;//should be spelled "inconsistent"
+		return E_INCONSISTENT;
 	if (len < 12)
 		return E_NOHEADER;
 	if (len-12 > MAX_PAYLOAD_SIZE)
@@ -90,7 +90,7 @@ pkt_status_code pkt_decode(const uint8_t *data, const size_t len, pkt_t *pkt)
 	pkt->window = window;
 	pkt->sequenceNb = seqnum;
 	pkt->payloadLength = payloadLength;
-	pkt->timestamp = ntohl(timestamp);
+	pkt->timestamp = ntohl(timestamp);//TODO put it in network byte-order since we don't know the endianness of the other machine
 	pkt->payload = payload;
 	pkt->crc = crc;
 
@@ -101,7 +101,7 @@ pkt_status_code pkt_encode(const pkt_t* pkt, uint8_t *buf, size_t *len)
 {
 	//Check for consistency of parameters
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 	if (len == NULL || *len < 12)
 		return E_NOMEM;
 
@@ -181,7 +181,7 @@ const char* pkt_get_payload(const pkt_t* pkt)
 pkt_status_code pkt_set_type(pkt_t *pkt, const ptypes_t type)
 {
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 	if (type != PTYPE_DATA && type != PTYPE_ACK)
 		return E_TYPE;
 
@@ -192,7 +192,7 @@ pkt_status_code pkt_set_type(pkt_t *pkt, const ptypes_t type)
 pkt_status_code pkt_set_window(pkt_t *pkt, const uint8_t window)
 {
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 	if (window > MAX_WINDOW_SIZE)
 		return E_WINDOW;
 
@@ -203,7 +203,7 @@ pkt_status_code pkt_set_window(pkt_t *pkt, const uint8_t window)
 pkt_status_code pkt_set_seqnum(pkt_t *pkt, const uint8_t seqnum)
 {
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 
 	pkt->sequenceNb = seqnum;
 	return PKT_OK;
@@ -212,7 +212,7 @@ pkt_status_code pkt_set_seqnum(pkt_t *pkt, const uint8_t seqnum)
 pkt_status_code pkt_set_length(pkt_t *pkt, const uint16_t length)
 {
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 	if (length > MAX_PAYLOAD_SIZE)
 		return E_LENGTH;
 
@@ -223,7 +223,7 @@ pkt_status_code pkt_set_length(pkt_t *pkt, const uint16_t length)
 pkt_status_code pkt_set_timestamp(pkt_t *pkt, const uint32_t timestamp)
 {
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 
 	pkt->timestamp = timestamp;
 	return PKT_OK;
@@ -232,7 +232,7 @@ pkt_status_code pkt_set_timestamp(pkt_t *pkt, const uint32_t timestamp)
 pkt_status_code pkt_set_crc(pkt_t *pkt, const uint32_t crc)
 {
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 
 	pkt->crc = crc;
 	return PKT_OK;
@@ -241,7 +241,7 @@ pkt_status_code pkt_set_crc(pkt_t *pkt, const uint32_t crc)
 pkt_status_code pkt_set_payload(pkt_t *pkt, const uint8_t *data, const uint16_t length)
 {
 	if (pkt == NULL)
-		return E_UNCONSISTENT;
+		return E_INCONSISTENT;
 	if (data == NULL || length == 0)
 		return E_LENGTH;
 
