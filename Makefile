@@ -7,10 +7,10 @@ SRC = src
 
 all : $(PROG_SENDER) $(PROG_RECEIVER)
 
-$(PROG_SENDER) : sender.o createConnection.o
-	$(CC) $(CFLAGS) -o $(PROG_SENDER) sender.o createConnection.o $(LFLAGS)
+$(PROG_SENDER) : sender.o createConnection.o senderReadWriteLoop.o senderManagePackets.o packets.o
+	$(CC) $(CFLAGS) -o $(PROG_SENDER) sender.o createConnection.o senderReadWriteLoop.o senderManagePackets.o packets.o $(LFLAGS)
 
-sender.o : $(SRC)/sender.c $(SRC)/defines.h createConnection.o
+sender.o : $(SRC)/sender.c $(SRC)/defines.h createConnection.o senderReadWriteLoop.o
 	$(CC) $(CFLAGS) -c $(SRC)/sender.c $(LFLAGS)
 
 $(PROG_RECEIVER) : receiver.o createConnection.o
@@ -22,10 +22,10 @@ receiver.o : $(SRC)/receiver.c $(SRC)/defines.h createConnection.o
 createConnection.o : $(SRC)/createConnection.c $(SRC)/defines.h
 	$(CC) $(CFLAGS) -c $(SRC)/createConnection.c
 
-senderReadWriteLoop.o : $(SRC)/senderReadWriteLoop.c $(SRC)/defines.h
+senderReadWriteLoop.o : $(SRC)/senderReadWriteLoop.c $(SRC)/defines.h senderManagePackets.o
 	$(CC) $(CFLAGS) -c $(SRC)/senderReadWriteLoop.c
 
-receiverReadWriteLoop.o : $(SRC)/receiverReadWriteLoop.c $(SRC)/defines.h
+receiverReadWriteLoop.o : $(SRC)/receiverReadWriteLoop.c $(SRC)/defines.h receiverManagePackets.o
 	$(CC) $(CFLAGS) -c $(SRC)/receiverReadWriteLoop.c
 
 packets.o : $(SRC)/packets.c $(SRC)/defines.h
