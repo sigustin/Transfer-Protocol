@@ -113,7 +113,7 @@ pkt_status_code pkt_set_type     (pkt_t*, const ptypes_t type);
 pkt_status_code pkt_set_window   (pkt_t*, const uint8_t window);
 pkt_status_code pkt_set_seqnum   (pkt_t*, const uint8_t seqnum);
 pkt_status_code pkt_set_length   (pkt_t*, const uint16_t length);
-pkt_status_code pkt_set_timestamp(pkt_t*, const uint32_t crc);
+pkt_status_code pkt_set_timestamp(pkt_t*, const uint32_t timestamp);
 pkt_status_code pkt_set_crc      (pkt_t*, const uint32_t crc);
 /* DÃ©fini la valeur du champs payload du paquet.
  * @data: Une succession d'octets reprÃ©sentants le payload
