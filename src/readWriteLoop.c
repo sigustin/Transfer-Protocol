@@ -25,7 +25,7 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
 
    FD_ZERO(&copyFdSet);
 
-   struct timeval tv;
+   struct timeval tv, tvCopy;
    tv.tv_sec = 0;
    tv.tv_usec = 5000;
 
@@ -35,8 +35,9 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
    {
       //--------------- Read input file ------------------
       copyFdSet = inputFdSet;
+      tvCopy = tv;
 
-      err = select(inputFile+1, &copyFdSet, NULL, NULL, &tv);
+      err = select(inputFile+1, &copyFdSet, NULL, NULL, &tvCopy);
       if (err < 0)
       {
          perror("Couldn't read input file");
@@ -63,8 +64,9 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
 
       //---------------- Write socket ----------------------
       copyFdSet = socketFdSet;
+      tvCopy = tv;
 
-      err = select(sfd+1, NULL, &copyFdSet, NULL, &tv);
+      err = select(sfd+1, NULL, &copyFdSet, NULL, &tvCopy);
       if (err < 0)
       {
          perror("Couldn't write on socket");
@@ -77,8 +79,9 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
 
       //---------------- Read socket (ack) ------------------------
       copyFdSet = socketFdSet;
+      tvCopy = tv;
 
-      err = select(sfd+1, &copyFdSet, NULL, NULL, &tv);
+      err = select(sfd+1, &copyFdSet, NULL, NULL, &tvCopy);
       if (err < 0)
       {
          perror("Couldn't read socket");
@@ -94,7 +97,7 @@ ERR_CODE readWriteLoopSender(const int sfd, const int inputFile)
          }
          else if (bytesRead == 0)
          {
-            //Received EOF from socket
+            //Received EOF from socket (possible?)
          }
          else
          {
@@ -131,7 +134,7 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
 
    FD_ZERO(&copyFdSet);
 
-   struct timeval tv;
+   struct timeval tv, tvCopy;
    tv.tv_sec = 0;
    tv.tv_usec = 5000;
 
@@ -141,8 +144,9 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
    {
       //------------------- Read socket ----------------------
       copyFdSet = socketFdSet;
+      tvCopy = tv;
 
-      err = select(sfd+1, &copyFdSet, NULL, NULL, &tv);
+      err = select(sfd+1, &copyFdSet, NULL, NULL, &tvCopy);
       if (err < 0)
       {
          perror("Couldn't read socket");
@@ -168,8 +172,9 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
 
       //------------------- Write output file -------------------------
       copyFdSet = outputFdSet;
+      tvCopy = tv;
 
-      err = select(outputFile+1, NULL, &copyFdSet, NULL, &tv);
+      err = select(outputFile+1, NULL, &copyFdSet, NULL, &tvCopy);
       if (err < 0)
       {
          perror("Couldn't write to output file");
@@ -182,8 +187,9 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
 
       //---------------------- Write socket (ack) ---------------------
       copyFdSet = socketFdSet;
+      tvCopy = tv;
 
-      err = select(sfd+1, NULL, &copyFdSet, NULL, &tv);
+      err = select(sfd+1, NULL, &copyFdSet, NULL, &tvCopy);
       if (err < 0)
       {
          perror("Couldn't write on socket");
