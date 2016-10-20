@@ -22,8 +22,11 @@ receiver.o : $(SRC)/receiver.c $(SRC)/defines.h createConnection.o
 createConnection.o : $(SRC)/createConnection.c $(SRC)/defines.h
 	$(CC) $(CFLAGS) -c $(SRC)/createConnection.c
 
-readWriteLoop.o : $(SRC)/readWriteLoop.c $(SRC)/defines.h
-	$(CC) $(CFLAGS) -c $(SRC)/readWriteLoop.c
+senderReadWriteLoop.o : $(SRC)/senderReadWriteLoop.c $(SRC)/defines.h
+	$(CC) $(CFLAGS) -c $(SRC)/senderReadWriteLoop.c
+
+receiverReadWriteLoop.o : $(SRC)/receiverReadWriteLoop.c $(SRC)/defines.h
+	$(CC) $(CFLAGS) -c $(SRC)/receiverReadWriteLoop.c
 
 packets.o : $(SRC)/packets.c $(SRC)/defines.h
 	$(CC) $(CFLAGS) -c $(SRC)/packets.c $(LFLAGS)
