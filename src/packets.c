@@ -46,7 +46,7 @@ void pkt_del(pkt_t *pkt)
 	free(pkt);
 }
 
-pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
+pkt_status_code pkt_decode(const uint8_t *data, const size_t len, pkt_t *pkt)
 {
 	//Check for the consistency of the data
 	if (data == NULL)
@@ -56,32 +56,30 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	if (len-12 > MAX_PAYLOAD_SIZE)
 		return E_LENGTH;
 
-	const uint8_t* dataCast = (uint8_t*) data;
-
 	//Extraction of the fields from array data and check for their consistency
-	uint8_t type = dataCast[0] >> 5;
+	uint8_t type = data[0] >> 5;
 	if (type != PTYPE_DATA && type != PTYPE_ACK)
 		return E_TYPE;
 
-	uint8_t window = (dataCast[0] & 0x1F);
+	uint8_t window = (data[0] & 0x1F);
 
-	uint8_t seqnum = dataCast[1];
+	uint8_t seqnum = data[1];
 
-	uint16_t payloadLength = getUInt16(&dataCast[2]);
+	uint16_t payloadLength = getUInt16(&data[2]);
 	if (payloadLength != len-12)
 		return E_LENGTH;
 
-	uint32_t timestamp = getUInt32(&dataCast[4]);
+	uint32_t timestamp = getUInt32(&data[4]);
 
 	uint8_t* payload = malloc(payloadLength);
 	int i;
 	for (i=0; i<payloadLength; i++)
-		payload[i] = dataCast[i+8];
+		payload[i] = data[i+8];
 
-	uint32_t crc = getUInt32(&dataCast[len-4]);
+	uint32_t crc = getUInt32(&data[len-4]);
 
 	//Computation of the CRC32 of the header and payload (using zlib's crc32 function)
-	uint32_t computedCRC = crc32(0L, dataCast, payloadLength+8);
+	uint32_t computedCRC = crc32(0L, data, payloadLength+8);
 	if (computedCRC != crc)
 		return E_CRC;
 
@@ -99,7 +97,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	return PKT_OK;
 }
 
-pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
+pkt_status_code pkt_encode(const pkt_t* pkt, uint8_t *buf, size_t *len)
 {
 	//Check for consistency of parameters
 	if (pkt == NULL)
@@ -111,21 +109,19 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 	if (*len < (size_t) pkt->payloadLength+12)
 		return E_NOMEM;
 
-	uint8_t* bufCast = (uint8_t*) buf;
-
 	//Fill up of the buffer
-	bufCast[0] = (pkt->type << 5) | pkt->window;
-	bufCast[1] = pkt->sequenceNb;
-	putUInt16(pkt->payloadLength, &bufCast[2]);
-	putUInt32(htonl(pkt->timestamp), &bufCast[4]);//doesn't pass inginious tests without changing the byte-order
+	buf[0] = (pkt->type << 5) | pkt->window;
+	buf[1] = pkt->sequenceNb;
+	putUInt16(pkt->payloadLength, &buf[2]);
+	putUInt32(htonl(pkt->timestamp), &buf[4]);//doesn't pass inginious tests without changing the byte-order
 
 	int i;
 	for (i=0; i<pkt->payloadLength; i++)
-		bufCast[i+8] = pkt->payload[i];
+		buf[i+8] = pkt->payload[i];
 
 	//Computation of the CRC32 of the header and payload (using zlib's crc32 function)
-	uint32_t crc = crc32(0L, bufCast, pkt->payloadLength+8);
-	putUInt32(crc, &bufCast[pkt->payloadLength+8]);
+	uint32_t crc = crc32(0L, buf, pkt->payloadLength+8);
+	putUInt32(crc, &buf[pkt->payloadLength+8]);
 
 	*len = pkt->payloadLength+12;
 
@@ -242,16 +238,12 @@ pkt_status_code pkt_set_crc(pkt_t *pkt, const uint32_t crc)
 	return PKT_OK;
 }
 
-pkt_status_code pkt_set_payload(pkt_t *pkt,
-							    const char *data,
-								const uint16_t length)
+pkt_status_code pkt_set_payload(pkt_t *pkt, const uint8_t *data, const uint16_t length)
 {
 	if (pkt == NULL)
 		return E_UNCONSISTENT;
 	if (data == NULL || length == 0)
 		return E_LENGTH;
-
-	uint8_t* dataCast = (uint8_t*) data;
 
 	if (pkt->payload != NULL)
 		free(pkt->payload);
@@ -259,7 +251,7 @@ pkt_status_code pkt_set_payload(pkt_t *pkt,
 
 	int i;
 	for (i=0; i<length; i++)
-		pkt->payload[i] = dataCast[i];
+		pkt->payload[i] = data[i];
 
 	pkt->payloadLength = length;
 
@@ -270,7 +262,7 @@ pkt_status_code pkt_set_payload(pkt_t *pkt,
 	putUInt16(pkt->payloadLength, &headerAndPayload[2]);
 	putUInt32(pkt->timestamp, &headerAndPayload[4]);
 	for (i=0; i<length; i++)
-		headerAndPayload[i+8] = dataCast[i];
+		headerAndPayload[i+8] = data[i];
 
 	uint32_t crc = crc32(0L, headerAndPayload, length+8);
 	pkt->crc = crc;

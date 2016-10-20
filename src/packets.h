@@ -74,7 +74,7 @@ void pkt_del(pkt_t*);
  * @return: Un code indiquant si l'opÃ©ration a rÃ©ussi ou reprÃ©sentant
  *         l'erreur rencontrÃ©e.
  */
-pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt);
+pkt_status_code pkt_decode(const uint8_t *data, const size_t len, pkt_t *pkt);
 
 /*
  * Encode une struct pkt dans un buffer, prÃªt Ã  Ãªtre envoyÃ© sur le rÃ©seau
@@ -87,7 +87,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt);
  * @return: Un code indiquant si l'opÃ©ration a rÃ©ussi ou E_NOMEM si
  *         le buffer est trop petit.
  */
-pkt_status_code pkt_encode(const pkt_t*, char *buf, size_t *len);
+pkt_status_code pkt_encode(const pkt_t*, uint8_t *buf, size_t *len);
 
 /* Accesseurs pour les champs toujours prÃ©sents du paquet.
  * Les valeurs renvoyÃ©es sont toutes dans l'endianness native
@@ -119,8 +119,6 @@ pkt_status_code pkt_set_crc      (pkt_t*, const uint32_t crc);
  * @data: Une succession d'octets reprÃ©sentants le payload
  * @length: Le nombre d'octets composant le payload
  * @POST: pkt_get_length(pkt) == length */
-pkt_status_code pkt_set_payload(pkt_t*,
-                                const char *data,
-                                const uint16_t length);
+pkt_status_code pkt_set_payload(pkt_t*, const uint8_t *data, const uint16_t length);
 
 #endif //_PACKETS_H_
