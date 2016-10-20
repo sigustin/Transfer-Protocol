@@ -33,7 +33,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 
    while (true)
    {
-      //--------------- Read input file ------------------
+      //================= Read input file (make new data packet) =========================
       copyFdSet = inputFdSet;
       tvCopy = tv;
 
@@ -45,7 +45,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       }
       else if (err > 0)
       {
-         bytesRead = read(inputFile, bufInput, MAX_PKT_SIZE);
+         bytesRead = read(inputFile, bufInput, MAX_PAYLOAD_SIZE);
          if (bytesRead < 0)
          {
             perror("Couldn't read input file");
@@ -58,11 +58,21 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          }
          else
          {
-            //TODO
+            //------------------- Create new data packet ----------------------------
+            pkt_t* newDataPkt = createDataPkt(bufInput, bytesRead);
+            if (newDataPkt == NULL)
+            {
+               ERROR("Couldn't create new data packet");
+            }
+            else
+            {
+               //----------------- Put data packet in buffer to be sent ----------------------
+               putNewPktInBufferToSend(newDataPkt);//TODO test return value
+            }
          }
       }
 
-      //---------------- Write socket ----------------------
+      //================ Write socket (write from packet buffer to socket) =========================
       copyFdSet = socketFdSet;
       tvCopy = tv;
 
@@ -74,10 +84,14 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       }
       else if (err > 0)
       {
-
+         //------------ Try to send packet (if there's something to send) -------------------------
+         if (sendDataPktFromBuffer(sfd) != RETURN_SUCCESS)
+         {
+            ERROR("Couldn't write data packet on socket");
+         }
       }
 
-      //---------------- Read socket (ack) ------------------------
+      //=================== Read socket (ack) ========================================
       copyFdSet = socketFdSet;
       tvCopy = tv;
 
@@ -101,8 +115,11 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          }
          else
          {
-            //TODO
-            senderInterpretDataReceived(bufSocket, bytesRead);
+            //Decode data, check packet and update FIFO buffer of packets to send
+            if(receiveAck(bufSocket, bytesRead) != RETURN_SUCCESS)
+            {
+               ERROR("Couldn't read acknowledment from socket");
+            }
          }
       }
    }
