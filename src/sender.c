@@ -11,6 +11,7 @@
 
 #include "defines.h"
 #include "createConnection.h"
+#include "senderReadWriteLoop.h"
 
 int main(int argc, char *argv[])
 {
@@ -84,8 +85,12 @@ int main(int argc, char *argv[])
 			return RETURN_FAILURE;
 		}
 	}
+	else
+		fileToSendFd = fileno(stdin);
 
 	//=============== Main loop (prepare and send packets and receive acknowledgments) =============
+	//TODO check return value
+	senderReadWriteLoop(sfd, fileToSendFd);
 
 	//=================== Close all resources ===============================
 	if (fileToSendFd != -1)
