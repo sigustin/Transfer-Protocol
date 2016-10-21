@@ -8,8 +8,6 @@ struct timeval bufPktSentTimers[MAX_PACKETS_PREPARED];//will contain the time wh
 
 uint8_t currentSeqnum = 0;//seqnum of the next pkt to create
 
-//TODO timers
-
 pkt_t* createDataPkt(const uint8_t* payload, uint16_t length)
 {
    DEBUG_FINE("createDataPkt");
@@ -150,7 +148,9 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
             break;
       }
 
-      //TODO ask packet to be sent again or ignore packet
+      //TODO ask packet to be sent again or ignore packet?
+      pkt_del(&pktReceived);
+      return RETURN_FAILURE;
    }
    else//Valid pkt
    {
