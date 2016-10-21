@@ -17,6 +17,7 @@
 
 #include "defines.h"
 #include "receiverManagePackets.h"
+#include "timer.h"
 
 ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile);
 

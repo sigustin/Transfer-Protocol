@@ -1,10 +1,15 @@
 #include "receiverManagePackets.h"
 
-extern pkt_t* acknowledmentsToSend[MAX_PACKETS_PREPARED];//buffer containing the acknowledments to be send by receiverReadWriteLoop
-extern int indexFirstAckToSend, nbAckToSend;
+//TODO purge buffers when an error terminates the program
 
-extern pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED];//will contain the packets received in sequence and that have to be written on the output file
-extern int indexFirstDataPkt, nbDataPktToWrite;
+extern bool lastPktReceived;
+
+pkt_t* acknowledgmentsToSend[MAX_PACKETS_PREPARED] = {NULL};//buffer containing the acknowledments to be send by receiverReadWriteLoop
+int indexFirstAckToSend = 0, nbAckToSend = 0;
+struct timeval timerAckSent;
+
+pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED] = {NULL};//will contain the packets received in sequence and that have to be written on the output file
+int indexFirstDataPkt = 0, nbDataPktToWrite = 0;
 
 uint8_t lastSeqnumReceivedInOrder = 0;
 uint32_t lastTimestampReceived = 0;
@@ -68,16 +73,24 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 
          //------ Check if packet is in sequence ------------------
          uint8_t seqnum = pkt_get_seqnum(&pktReceived);
+         fprintf(stderr, "Valid packet has seqnum : %d\n", seqnum);
          if (lastSeqnumReceivedInOrder+1 == seqnum)//packet is in sequence
          {
+            DEBUG_FINE("Data packet in sequence");
+
             lastSeqnumReceivedInOrder++;
 
-            dataPktInSequence[(indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED] = &pktReceived;
-            nbDataPktToWrite++;
-            //TODO check packet is not the last packet
+            if (pkt_get_length(&pktReceived) == 0)
+               lastPktReceived = true;
+            else
+            {
+               dataPktInSequence[(indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED] = &pktReceived;
+               nbDataPktToWrite++;
+            }
          }
          else//packet is out-of-sequence
          {
+            DEBUG_FINE("Data packet out-of-sequence");
             //---------- Check if seqnum is in the window and put it in the buffer if it is ------------------
             //TODO check return value
             putOutOfSequencePktInBuf(&pktReceived);
@@ -91,7 +104,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             return RETURN_FAILURE;
          }
 
-         acknowledmentsToSend[(indexFirstAckToSend+nbAckToSend)%MAX_PACKETS_PREPARED] = newAck;
+         acknowledgmentsToSend[(indexFirstAckToSend+nbAckToSend)%MAX_PACKETS_PREPARED] = newAck;
          nbAckToSend++;
       }
    }
@@ -156,4 +169,143 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
    }
 
    return RETURN_SUCCESS;
+}
+
+ERR_CODE sendAckFromBuffer(const int sfd)
+{
+   //Initializing timer
+   static bool firstSending = true;
+   if (firstSending)
+   {
+      timerAckSent.tv_sec = timerAckSent.tv_usec = 0;
+      firstSending = false;
+   }
+
+   DEBUG_FINEST("Try to send ack");
+
+   if (sfd < 0)
+   {
+      ERROR("Invalid socket file descriptor");
+      return RETURN_FAILURE;
+   }
+
+   if (nbAckToSend > 1)
+   {
+      //send all acknowledgments and remove them except the last one
+      while (nbAckToSend >= 1)
+      {
+         DEBUG_FINE("Send acknowledgment");
+
+         if (sendFirstAckFromBuffer(sfd) != RETURN_SUCCESS)
+            return RETURN_FAILURE;
+
+         //reset timer
+         gettimeofday(&timerAckSent, NULL);
+
+         if (nbAckToSend == 1)
+            break;
+
+         if (nbAckToSend > 1)
+         {
+            pkt_del(acknowledgmentsToSend[indexFirstAckToSend]);
+            acknowledgmentsToSend[indexFirstAckToSend] = NULL;
+            indexFirstAckToSend++;
+            nbAckToSend--;
+         }
+      }
+   }
+   else//nbAckToSend == 1
+   {
+      if (isTimerOver(timerAckSent))//true also with a timer zeroed out
+      {
+         DEBUG_FINE("Send acknowledgment");
+
+         if (sendFirstAckFromBuffer(sfd) != RETURN_SUCCESS)
+            return RETURN_FAILURE;
+
+         //reset timer
+         gettimeofday(&timerAckSent, NULL);
+      }
+   }
+
+   if (lastPktReceived)//last acknowledgment has been sent at least once
+   {
+      //delete last acknowledgment
+      pkt_del(acknowledgmentsToSend[indexFirstAckToSend]);
+      acknowledgmentsToSend[indexFirstAckToSend] = NULL;
+      indexFirstAckToSend++;
+      nbAckToSend--;
+   }
+
+   return RETURN_SUCCESS;
+}
+
+ERR_CODE sendFirstAckFromBuffer(const int sfd)
+{
+   if (sfd < 0)
+   {
+      ERROR("Invalid socket file descriptor");
+      return RETURN_FAILURE;
+   }
+   if (nbAckToSend <= 0)
+   {
+      ERROR("Tried to send no acknowledgment");
+      return RETURN_FAILURE;
+   }
+
+   uint8_t* rawAckToSend = malloc(HEADER_SIZE);//no payload in acknowledments
+   size_t lengthAck = HEADER_SIZE;
+   //TODO check return value
+   pkt_encode(acknowledgmentsToSend[indexFirstAckToSend], rawAckToSend, &lengthAck);
+   if (lengthAck != HEADER_SIZE)
+   {
+      ERROR("Couldn't encode the full acknowledment to be sent");
+      free(rawAckToSend);
+      return RETURN_FAILURE;
+   }
+
+   if (sendto(sfd, rawAckToSend, lengthAck, 0, NULL, 0) != lengthAck)
+   {
+      ERROR("Couldn't write acknowledment on socket");
+      free(rawAckToSend);
+      return RETURN_FAILURE;
+   }
+
+   free(rawAckToSend);
+
+   return RETURN_SUCCESS;
+}
+
+ERR_CODE writePayloadInOutputFile(const int fd)
+{
+   if (fd < 0)
+   {
+      ERROR("Invalid file descriptor");
+      return RETURN_FAILURE;
+   }
+
+   while (nbDataPktToWrite > 0)
+   {
+      DEBUG_FINE("Writing payload in the output file");
+
+      if (write(fd, pkt_get_payload(dataPktInSequence[indexFirstDataPkt]), pkt_get_length(dataPktInSequence[indexFirstDataPkt])) == -1)
+      {
+         perror("Couldn't write payload in output file");
+         return RETURN_FAILURE;
+      }
+
+      pkt_del(dataPktInSequence[indexFirstDataPkt]);
+      dataPktInSequence[indexFirstDataPkt] = NULL;
+
+      indexFirstDataPkt++;
+      indexFirstDataPkt %= MAX_PACKETS_PREPARED;
+      nbDataPktToWrite--;
+   }
+
+   return RETURN_SUCCESS;
+}
+
+bool stillSomethingToWrite()
+{
+   return (nbDataPktToWrite > 0) || (nbAckToSend > 0);
 }

@@ -5,9 +5,11 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/time.h>
 
 #include "defines.h"
 #include "packets.h"
+#include "timer.h"
 
 /*
  * Decodes data received, put it in a pkt_t and checks if it is out-of-sequence
@@ -30,5 +32,29 @@ pkt_t* createNewAck();
  * Puts data packet in the buffer of out-of-sequence received packets (if seqnum is in window)
  */
 ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt);
+
+/*
+ * If the buffer containing acknowledments to be sent is not empty,
+ * sends the acknowledgments on the socket @sfd
+ * Deletes every acknowledgments sent except the last one
+ */
+ERR_CODE sendAckFromBuffer(const int sfd);
+
+/*
+ * Sends the first acknowledgment in the buffer on @sfd
+ */
+ERR_CODE sendFirstAckFromBuffer(const int sfd);
+
+/*
+ * If there's something to write in the buffer containing packets in sequence,
+ * writes the payload of the packets in the output file @fd
+ */
+ERR_CODE writePayloadInOutputFile(const int fd);
+
+/*
+ * @return :   true if there's still something to write in the output file or if there are still acknowledgments that have to be sent
+ *             false otherwise
+ */
+bool stillSomethingToWrite();
 
 #endif //_RECEIVER_MANAGE_PACKETS_H_
