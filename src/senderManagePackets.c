@@ -31,7 +31,7 @@ pkt_t* createDataPkt(const uint8_t* payload, uint16_t length)
    pkt_set_seqnum(pkt, currentSeqnum);
    currentSeqnum++;//255++ == 0 since it's a uint8_t
    pkt_set_length(pkt, length);
-   pkt_set_timestamp(pkt, 0);//TODO 
+   pkt_set_timestamp(pkt, 0);//TODO
    pkt_set_payload(pkt, payload, length);//crc is computed and put in pkt
 
    return pkt;
@@ -161,8 +161,12 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
       }
       else//Valid acknowledment pkt
       {
+         DEBUG_FINE("Interpreting valid acknowledment packet");
+
          uint8_t seqnum = pkt_get_seqnum(&pktReceived);
          removeDataPktFromBuffer(seqnum);
+
+         fprintf(stderr, "Acknowledgment has seqnum : %d\n", seqnum);
 
          currentReceiverWindowSize = pkt_get_window(&pktReceived);
       }
