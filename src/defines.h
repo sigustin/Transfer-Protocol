@@ -11,6 +11,8 @@
 #define HEADER_SIZE        12
 #define MAX_PKT_SIZE       MAX_PAYLOAD_SIZE+HEADER_SIZE
 
+#define MAX_PACKETS_PREPARED  1024
+
 #define ERR_CODE        int
 #define RETURN_SUCCESS  0
 #define RETURN_FAILURE  -1
