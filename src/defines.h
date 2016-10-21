@@ -1,6 +1,10 @@
 #ifndef _DEFINES_H_
 #define _DEFINES_H_
 
+#define DEBUG(string);        fprintf(stderr, "DEBUG :\t%s\n", string);
+#define DEBUG_FINE(string);   fprintf(stderr, "DEBUG :\t%s\n", string);
+#define DEBUG_FINEST(string); //fprintf(stderr, "DEBUG :\t%s\n", string);
+
 #define ERROR(string);	fprintf(stderr, "ERROR :\t%s\n", string);
 
 #define MAX_PAYLOAD_SIZE   512

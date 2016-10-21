@@ -2,6 +2,8 @@
 
 const char * real_address(const char *address, struct sockaddr_in6 *rval)
 {
+	DEBUG("real_address");
+
 	if (address == NULL)
 		return "Couldn't find address to resolve";
 
@@ -32,6 +34,8 @@ const char * real_address(const char *address, struct sockaddr_in6 *rval)
 
 int create_sender_socket(struct sockaddr_in6* receiverAddress, int port)
 {
+	DEBUG("create_sender_socket");
+
 	struct protoent* protocolInfo = getprotobyname("udp");
 	int protocol = protocolInfo->p_proto;
 	int sfd = socket(AF_INET6, SOCK_DGRAM, protocol);
@@ -49,11 +53,15 @@ int create_sender_socket(struct sockaddr_in6* receiverAddress, int port)
 		return -1;
 	}
 
+	fprintf(stderr, "DEBUG :\tconnected to port %d (=>%d)\n", port, htons(port));
+
 	return sfd;
 }
 
 int create_receiver_socket(struct sockaddr_in6* senderAddress, int port)
 {
+	DEBUG("create_receiver_socket");
+
 	struct protoent* protocolInfo = getprotobyname("udp");
 	int protocol = protocolInfo->p_proto;
 	int sfd = socket(AF_INET6, SOCK_DGRAM, protocol);
@@ -71,11 +79,15 @@ int create_receiver_socket(struct sockaddr_in6* senderAddress, int port)
 		return -1;
 	}
 
+	fprintf(stderr, "DEBUG :\tbound to port %d (=>%d)\n", port, htons(port));
+
 	return sfd;
 }
 
 int connect_receiver_socket(int sfd)
 {
+	DEBUG("connect_receiver_socket");
+
 	if (sfd < 0)
 	{
 		ERROR("Invalid file descriptor");

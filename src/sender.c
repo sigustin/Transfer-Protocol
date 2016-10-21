@@ -13,6 +13,8 @@
 #include "createConnection.h"
 #include "senderReadWriteLoop.h"
 
+//Works with port 1025 and a receiver running on the same port
+
 int main(int argc, char *argv[])
 {
 	fprintf(stderr, "Running sender\n");
@@ -64,6 +66,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Couldn't resolve hostname %s :%s\n", receiverHostname, errMsg);
 		return EXIT_FAILURE;
 	}
+	DEBUG("Host name resolved");
 
 	//--------------- Create socket -----------------------
 	int sfd = create_sender_socket(&receiverAddress, port);

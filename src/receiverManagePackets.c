@@ -1,5 +1,7 @@
 #include "receiverManagePackets.h"
 
+uint8_t lastSeqnumReceived, lastSeqnumAcknowledged;
+
 ERR_CODE receiverInterpretDataReceived(const uint8_t* data, int length)
 {
    if (length <= 0)

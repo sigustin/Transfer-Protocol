@@ -2,6 +2,8 @@
 
 ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 {
+   DEBUG("senderReadWriteLoop");
+
    if (sfd < 0)
    {
       ERROR("Invalid socket file descriptor");
@@ -45,6 +47,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       }
       else if (err > 0)
       {
+         DEBUG("Trying to read from input file");
          bytesRead = read(inputFile, bufInput, MAX_PAYLOAD_SIZE);
          if (bytesRead < 0)
          {
@@ -85,6 +88,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       else if (err > 0)
       {
          //------------ Try to send packet (if there's something to send) -------------------------
+         DEBUG_FINEST("Trying to send data on the socket (if there's something to send)");
          if (sendDataPktFromBuffer(sfd) != RETURN_SUCCESS)
          {
             ERROR("Couldn't write data packet on socket");
@@ -103,10 +107,11 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       }
       else if (err > 0)
       {
+         DEBUG("Trying to receive data from socket");
          bytesRead = recvfrom(sfd, bufSocket, MAX_PKT_SIZE, 0, NULL, NULL);
          if (bytesRead < 0)
          {
-            perror("Couldn't receive data from socket");
+            perror("Couldn't receive data from socket");//Connection refused if no receiver is running
             return RETURN_FAILURE;
          }
          else if (bytesRead == 0)
