@@ -5,9 +5,11 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/time.h>
 
 #include "defines.h"
 #include "packets.h"
+#include "timer.h"
 
 #define MAX_PACKETS_PREPARED  1024
 
