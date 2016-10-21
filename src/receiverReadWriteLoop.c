@@ -2,6 +2,8 @@
 
 ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
 {
+   DEBUG("readWriteLoopReceiver");
+
    if (sfd < 0)
    {
       ERROR("Invalid socket file descriptor");
@@ -45,6 +47,8 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
       }
       else if (err > 0)
       {
+         DEBUG_FINE("Trying to read from socket");
+
          bytesRead = recvfrom(sfd, bufSocket, MAX_PKT_SIZE, 0, NULL, NULL);
          if (bytesRead < 0)
          {
@@ -74,6 +78,7 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
       }
       else if (err > 0)
       {
+         DEBUG_FINEST("Trying to write to output file (if there's something to write)");
          //TODO
       }
 
@@ -89,6 +94,7 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
       }
       else if (err > 0)
       {
+         DEBUG_FINEST("Trying to write on socket (if there's an acknowledment to write)")
          //TODO
       }
    }
