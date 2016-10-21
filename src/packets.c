@@ -90,7 +90,7 @@ pkt_status_code pkt_decode(const uint8_t *data, const size_t len, pkt_t *pkt)
 	pkt->window = window;
 	pkt->sequenceNb = seqnum;
 	pkt->payloadLength = payloadLength;
-	pkt->timestamp = ntohl(timestamp);//TODO put it in network byte-order since we don't know the endianness of the other machine
+	pkt->timestamp = timestamp;
 	pkt->payload = payload;
 	pkt->crc = crc;
 
@@ -113,7 +113,7 @@ pkt_status_code pkt_encode(const pkt_t* pkt, uint8_t *buf, size_t *len)
 	buf[0] = (pkt->type << 5) | pkt->window;
 	buf[1] = pkt->sequenceNb;
 	putUInt16(pkt->payloadLength, &buf[2]);
-	putUInt32(htonl(pkt->timestamp), &buf[4]);//doesn't pass inginious tests without changing the byte-order
+	putUInt32(pkt->timestamp, &buf[4]);//doesn't pass inginious tests without changing the byte-order
 
 	int i;
 	for (i=0; i<pkt->payloadLength; i++)
@@ -243,7 +243,20 @@ pkt_status_code pkt_set_payload(pkt_t *pkt, const uint8_t *data, const uint16_t 
 	if (pkt == NULL)
 		return E_INCONSISTENT;
 	if (data == NULL || length == 0)
-		return E_LENGTH;
+	{
+		uint8_t* headerRaw = malloc(8);
+		headerRaw[0] = (pkt->type << 5) | pkt->window;
+		headerRaw[1] = pkt->sequenceNb;
+		putUInt16(pkt->payloadLength, &headerRaw[2]);
+		putUInt32(pkt->timestamp, &headerRaw[4]);
+
+		uint32_t crc = crc32(0L, headerRaw, 8);
+		pkt->crc = crc;
+
+		free(headerRaw);
+
+		return PKT_OK;
+	}
 
 	if (pkt->payload != NULL)
 		free(pkt->payload);
@@ -266,6 +279,8 @@ pkt_status_code pkt_set_payload(pkt_t *pkt, const uint8_t *data, const uint16_t 
 
 	uint32_t crc = crc32(0L, headerAndPayload, length+8);
 	pkt->crc = crc;
+
+	free(headerAndPayload);
 
 	return PKT_OK;
 }
