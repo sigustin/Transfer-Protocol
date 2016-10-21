@@ -81,6 +81,7 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
     * firstBufIndex is the index of the first packet in the sending window
     * packets from index firstBufIndex to firstBufIndex+currentReceiverWindowSize should be sent (if they haven't yet been sent or if their timer has ran out)
     */
+   //TODO this will be a go-back-n protocol with this for loop
    int i;
    for (i=firstBufIndex; i<currentReceiverWindowSize; i++)
    {

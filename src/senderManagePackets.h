@@ -11,8 +11,6 @@
 #include "packets.h"
 #include "timer.h"
 
-#define MAX_PACKETS_PREPARED  1024
-
 //--------------------------
 //Those functions are called by the sender only
 //--------------------------
