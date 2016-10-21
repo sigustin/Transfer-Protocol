@@ -31,7 +31,7 @@ pkt_t* createDataPkt(const uint8_t* payload, uint16_t length)
    pkt_set_seqnum(pkt, currentSeqnum);
    currentSeqnum++;//255++ == 0 since it's a uint8_t
    pkt_set_length(pkt, length);
-   //TODO pkt_set_timestamp()
+   pkt_set_timestamp(pkt, 0);//TODO 
    pkt_set_payload(pkt, payload, length);//crc is computed and put in pkt
 
    return pkt;
