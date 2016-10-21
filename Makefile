@@ -7,8 +7,8 @@ SRC = src
 
 all : $(PROG_SENDER) $(PROG_RECEIVER)
 
-$(PROG_SENDER) : sender.o createConnection.o senderReadWriteLoop.o senderManagePackets.o packets.o
-	$(CC) $(CFLAGS) -o $(PROG_SENDER) sender.o createConnection.o senderReadWriteLoop.o senderManagePackets.o packets.o $(LFLAGS)
+$(PROG_SENDER) : sender.o createConnection.o senderReadWriteLoop.o senderManagePackets.o packets.o timer.o
+	$(CC) $(CFLAGS) -o $(PROG_SENDER) sender.o createConnection.o senderReadWriteLoop.o senderManagePackets.o packets.o timer.o $(LFLAGS)
 
 sender.o : $(SRC)/sender.c $(SRC)/defines.h createConnection.o senderReadWriteLoop.o
 	$(CC) $(CFLAGS) -c $(SRC)/sender.c $(LFLAGS)
@@ -31,11 +31,14 @@ receiverReadWriteLoop.o : $(SRC)/receiverReadWriteLoop.c $(SRC)/defines.h receiv
 packets.o : $(SRC)/packets.c $(SRC)/defines.h
 	$(CC) $(CFLAGS) -c $(SRC)/packets.c $(LFLAGS)
 
-senderManagePackets.o : $(SRC)/senderManagePackets.c $(SRC)/defines.h packets.o
+senderManagePackets.o : $(SRC)/senderManagePackets.c $(SRC)/defines.h packets.o timer.o
 	$(CC) $(CFLAGS) -c $(SRC)/senderManagePackets.c $(LFLAGS)
 
 receiverManagerPackets.o : $(SRC)/receiverManagePackets.c $(SRC)/defines.h packets.o
 	$(CC) $(CFLAGS) -c $(SRC)/receiverManagePackets.c $(LFLAGS)
+
+timer.o : $(SRC)/timer.c
+	$(CC) $(CFLAGS) -c $(SRC)/timer.c
 
 clean :
 	@rm -f *.o #-f prevents an error message to be displayed if no file were found to be deleted
