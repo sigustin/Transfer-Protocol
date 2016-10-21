@@ -27,15 +27,8 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length);
 pkt_t* createNewAck();
 
 /*
- * Puts @ack in the buffer of acknowledment ready to be sent
- * @return :   RETURN_SUCCESS if there was no error
- *             RETURN_FAILURE otherwise
- */
-ERR_CODE putAckInBuf(pkt_t* ack);
-
-/*
  * Puts data packet in the buffer of out-of-sequence received packets (if seqnum is in window)
  */
-ERR_CODE putReceivedPktInBuf(pkt_t* dataPkt);
+ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt);
 
 #endif //_RECEIVER_MANAGE_PACKETS_H_

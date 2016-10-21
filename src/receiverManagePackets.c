@@ -1,15 +1,16 @@
 #include "receiverManagePackets.h"
 
+extern pkt_t* acknowledmentsToSend[MAX_PACKETS_PREPARED];//buffer containing the acknowledments to be send by receiverReadWriteLoop
+extern int indexFirstAckToSend, nbAckToSend;
+
+extern pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED];//will contain the packets received in sequence and that have to be written on the output file
+extern int indexFirstDataPkt, nbDataPktToWrite;
+
 uint8_t lastSeqnumReceivedInOrder = 0;
 uint32_t lastTimestampReceived = 0;
 
-pkt_t* bufPktReceived[MAX_WINDOW_SIZE] = {NULL};//Contains out-of-sequence received packets
+pkt_t* bufOutOfSequencePkt[MAX_WINDOW_SIZE] = {NULL};//Contains out-of-sequence received packets
 int firstPktBufIndex = 0, nbPktReceivedInBuf = 0;//window size = MAX_WINDOW_SIZE-nbPktReceivedInBuf
-
-pkt_t* bufAckPrepared[MAX_PACKETS_PREPARED] = {NULL};//Contains ack ready to be sent (in order)
-int firstAckBufIndex = 0, nbAckPreaparedInBuf = 0;
-
-//TODO timers
 
 ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 {
@@ -71,15 +72,15 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
          {
             lastSeqnumReceivedInOrder++;
 
-            const uint8_t* dataPayload = pkt_get_payload(&pktReceived);
-            //TODO put in buffer of things to write in output file
+            dataPktInSequence[(indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED] = &pktReceived;
+            nbDataPktToWrite++;
             //TODO check packet is not the last packet
          }
          else//packet is out-of-sequence
          {
             //---------- Check if seqnum is in the window and put it in the buffer if it is ------------------
             //TODO check return value
-            putReceivedPktInBuf(&pktReceived);
+            putOutOfSequencePktInBuf(&pktReceived);
          }
 
          //--------- Prepare ack and put it in buffer to send ----------------------
@@ -90,8 +91,8 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             return RETURN_FAILURE;
          }
 
-         //TODO check return value
-         putAckInBuf(newAck);
+         acknowledmentsToSend[(indexFirstAckToSend+nbAckToSend)%MAX_PACKETS_PREPARED] = newAck;
+         nbAckToSend++;
       }
    }
 
@@ -118,23 +119,7 @@ pkt_t* createNewAck()
    return ack;
 }
 
-ERR_CODE putAckInBuf(pkt_t* ack)
-{
-   if (ack == NULL)
-   {
-      ERROR("Tried to put no acknowledment in buffer");
-      return RETURN_FAILURE;
-   }
-
-   int nextIndex = (firstAckBufIndex+nbAckPreaparedInBuf)%MAX_PACKETS_PREPARED;
-   bufAckPrepared[nextIndex] = ack;
-   nbAckPreaparedInBuf++;
-   //TODO zero out timer
-
-   return RETURN_SUCCESS;
-}
-
-ERR_CODE putReceivedPktInBuf(pkt_t* dataPkt)
+ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
 {
    if (dataPkt == NULL)
    {
@@ -161,13 +146,13 @@ ERR_CODE putReceivedPktInBuf(pkt_t* dataPkt)
    else
    {
       int index = (firstPktBufIndex + distanceSeqnumToFirstWindowSeqnum) % MAX_WINDOW_SIZE;
-      if (bufPktReceived[index] != NULL)//not supposed to happen
+      if (bufOutOfSequencePkt[index] != NULL)//not supposed to happen
       {
          ERROR("There was a problem with the buffer containing packets out-of-sequence.\nTried to overwrite data")
          return RETURN_FAILURE;
       }
 
-      bufPktReceived[index] = dataPkt;
+      bufOutOfSequencePkt[index] = dataPkt;
    }
 
    return RETURN_SUCCESS;

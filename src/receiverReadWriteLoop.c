@@ -1,5 +1,11 @@
 #include "receiverReadWriteLoop.h"
 
+pkt_t* acknowledmentsToSend[MAX_PACKETS_PREPARED] = {NULL};
+int indexFirstAckToSend = 0, nbAckToSend = 0;
+
+pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED] = {NULL};
+int indexFirstDataPkt = 0, nbDataPktToWrite = 0;
+
 ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
 {
    DEBUG("readWriteLoopReceiver");
@@ -62,7 +68,7 @@ ERR_CODE readWriteLoopReceiver(const int sfd, const int outputFile)
          else
          {
             //TODO
-            receiverInterpretDataReceived(bufSocket, bytesRead);
+            receiveDataPacket(bufSocket, bytesRead);
          }
       }
 
