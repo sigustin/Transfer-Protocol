@@ -13,10 +13,10 @@ $(PROG_SENDER) : sender.o createConnection.o senderReadWriteLoop.o senderManageP
 sender.o : $(SRC)/sender.c $(SRC)/defines.h createConnection.o senderReadWriteLoop.o
 	$(CC) $(CFLAGS) -c $(SRC)/sender.c $(LFLAGS)
 
-$(PROG_RECEIVER) : receiver.o createConnection.o
-	$(CC) $(CFLAGS) -o $(PROG_RECEIVER) receiver.o createConnection.o $(LFLAGS)
+$(PROG_RECEIVER) : receiver.o createConnection.o receiverReadWriteLoop.o receiverManagePackets.o packets.o timer.o
+	$(CC) $(CFLAGS) -o $(PROG_RECEIVER) receiver.o createConnection.o receiverReadWriteLoop.o receiverManagePackets.o packets.o timer.o $(LFLAGS)
 
-receiver.o : $(SRC)/receiver.c $(SRC)/defines.h createConnection.o
+receiver.o : $(SRC)/receiver.c $(SRC)/defines.h createConnection.o receiverReadWriteLoop.o
 	$(CC) $(CFLAGS) -c $(SRC)/receiver.c $(LFLAGS)
 
 createConnection.o : $(SRC)/createConnection.c $(SRC)/defines.h
@@ -34,7 +34,7 @@ packets.o : $(SRC)/packets.c $(SRC)/defines.h
 senderManagePackets.o : $(SRC)/senderManagePackets.c $(SRC)/defines.h packets.o timer.o
 	$(CC) $(CFLAGS) -c $(SRC)/senderManagePackets.c $(LFLAGS)
 
-receiverManagerPackets.o : $(SRC)/receiverManagePackets.c $(SRC)/defines.h packets.o
+receiverManagePackets.o : $(SRC)/receiverManagePackets.c $(SRC)/defines.h packets.o timer.o
 	$(CC) $(CFLAGS) -c $(SRC)/receiverManagePackets.c $(LFLAGS)
 
 timer.o : $(SRC)/timer.c

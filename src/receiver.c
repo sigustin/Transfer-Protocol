@@ -11,6 +11,7 @@
 
 #include "defines.h"
 #include "createConnection.h"
+#include "receiverReadWriteLoop.h"
 
 int main(int argc, char *argv[])
 {
@@ -93,8 +94,12 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	}
+	else
+		fileToWriteFd = fileno(stdout);
 
 	//=========== Main loop (receive and interpret packets and send acknowledments) ============
+	//TODO check return value
+	receiverReadWriteLoop(sfd, fileToWriteFd);
 
 	//===================== Close all resources =========================
 	if (fileToWriteFd != -1)
