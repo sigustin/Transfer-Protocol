@@ -11,6 +11,7 @@
 #include "defines.h"
 
 #define MAX_WINDOW_SIZE 31
+#define NB_DIFFERENT_SEQNUM	256
 
 typedef struct pkt pkt_t;
 struct __attribute__((__packed__)) pkt//everything is kept in host byte-order
@@ -102,7 +103,7 @@ uint32_t pkt_get_crc      (const pkt_t*);
 /* Renvoie un pointeur vers le payload du paquet, ou NULL s'il n'y
  * en a pas.
  */
-const char* pkt_get_payload(const pkt_t*);
+const uint8_t* pkt_get_payload(const pkt_t*);
 
 /* Setters pour les champs obligatoires du paquet. Si les valeurs
  * fournies ne sont pas dans les limites acceptables, les fonctions

@@ -170,11 +170,11 @@ uint32_t pkt_get_crc (const pkt_t* pkt)
 	return pkt->crc;
 }
 
-const char* pkt_get_payload(const pkt_t* pkt)
+const uint8_t* pkt_get_payload(const pkt_t* pkt)
 {
 	if (pkt == NULL)
 		return NULL;
-	return (const char*) pkt->payload;
+	return (const uint8_t*) pkt->payload;
 }
 
 
