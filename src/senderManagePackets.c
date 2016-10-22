@@ -86,7 +86,7 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
     * firstBufIndex is the index of the first packet in the sending window
     * packets from index firstBufIndex to firstBufIndex+currentReceiverWindowSize should be sent (if they haven't yet been sent or if their timer has ran out)
     */
-   //TODO this will be a go-back-n protocol with this for loop
+   //TODO this will be a go-back-n protocol with this for loop?
    int i;
    for (i=0; i<currentReceiverWindowSize && i<nbPktToSend; i++)
    {
@@ -173,13 +173,11 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
       {
          DEBUG_FINE("Interpreting valid acknowledment packet");
 
-         uint8_t seqnum = pkt_get_seqnum(&pktReceived);
-
-         fprintf(stderr, "Acknowledgment has seqnum : %d\n", seqnum);
-
-         removeDataPktFromBuffer(seqnum);
-
          currentReceiverWindowSize = pkt_get_window(&pktReceived);
+
+         uint8_t seqnum = pkt_get_seqnum(&pktReceived);
+         fprintf(stderr, "Acknowledgment has seqnum : %d\n", seqnum);
+         removeDataPktFromBuffer(seqnum);
       }
    }
 
