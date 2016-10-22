@@ -345,6 +345,36 @@ bool stillSomethingToWrite()
    return (nbDataPktToWrite > 0) || (nbAckToSend > 0);
 }
 
+void purgeBuffers()
+{
+   if (nbAckToSend > 0)
+   {
+      WARNING("Purging not empty buffer of acknowledgments to send");
+   }
+   if (nbDataPktToWrite > 0)
+   {
+      WARNING("Purging not empty buffer of data packets to write on output file");
+   }
+   if (nbPktReceivedInBuf > 0)
+   {
+      WARNING("Purging not empty buffer of out-of-sequence data packets");
+   }
+
+   int i;
+   for (i=0; i<MAX_PACKETS_PREPARED; i++)
+   {
+      if (acknowledgmentsToSend[i] != NULL)
+         pkt_del(acknowledgmentsToSend[i]);
+      if (dataPktInSequence[i] != NULL)
+         pkt_del(dataPktInSequence[i]);
+   }
+   for (i=0; i<MAX_WINDOW_SIZE; i++)
+   {
+      if (bufOutOfSequencePkt[i] != NULL)
+         pkt_del(bufOutOfSequencePkt[i]);
+   }
+}
+
 void printDataPktInSequenceBuf()
 {
    if (nbDataPktToWrite <= 0)

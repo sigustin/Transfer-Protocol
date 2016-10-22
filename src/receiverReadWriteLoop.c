@@ -35,7 +35,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
 
    int bytesRead;
 
-   while (true)
+   while (!lastPktReceived || stillSomethingToWrite())
    {
       if (!lastPktReceived)
       {
@@ -47,6 +47,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
          if (err < 0)
          {
             perror("Couldn't read socket");
+            purgeBuffers();
             return RETURN_FAILURE;
          }
          else if (err > 0)
@@ -57,6 +58,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
             if (bytesRead < 0)
             {
                perror("Couldn't read from socket");
+               purgeBuffers();
                return RETURN_FAILURE;
             }
             else if (bytesRead == 0)//Received EOF from socket (possible?)
@@ -76,6 +78,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
       if (err < 0)
       {
          perror("Couldn't write to output file");
+         purgeBuffers();
          return RETURN_FAILURE;
       }
       else if (err > 0)
@@ -85,6 +88,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
          if (writePayloadInOutputFile(outputFile) != RETURN_SUCCESS)
          {
             ERROR("Couldn't write data in output file");
+            purgeBuffers();
             return RETURN_FAILURE;
          }
       }
@@ -97,6 +101,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
       if (err < 0)
       {
          perror("Couldn't write on socket");
+         purgeBuffers();
          return RETURN_FAILURE;
       }
       else if (err > 0)
@@ -106,16 +111,14 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
          if (sendAckFromBuffer(sfd) != RETURN_SUCCESS)
          {
             ERROR("Couldn't send acknowledgments on socket");
+            purgeBuffers();
             return RETURN_FAILURE;
          }
       }
-
-      if (lastPktReceived && !stillSomethingToWrite())
-      {
-         DEBUG("Exit : last packet received and nothing more to write or acknowledge");
-         break;
-      }
    }
+
+   DEBUG("Exit : last packet received and nothing more to write or acknowledge");
+   purgeBuffers();
 
    return RETURN_SUCCESS;
 }

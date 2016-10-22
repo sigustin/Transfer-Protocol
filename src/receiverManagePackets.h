@@ -58,6 +58,13 @@ ERR_CODE writePayloadInOutputFile(const int fd);
 bool stillSomethingToWrite();
 
 /*
+ * Deletes every packets in @acknowledgmentsToSend, @dataPktInSequence and @bufOutOfSequencePkt
+ * Inteded to be called when exiting program
+ * WARNING : there's a function with the same signature in senderManagePackets.h/c
+ */
+void purgeBuffers();
+
+/*
  * Intended only for DEBUG
  * Prints on stderr the content of the buffer @dataPktInSequence
  */

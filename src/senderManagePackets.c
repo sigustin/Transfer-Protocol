@@ -212,6 +212,21 @@ void removeDataPktFromBuffer(uint8_t minSeqnumToKeep)
    }
 }
 
+void purgeBuffers()
+{
+   if (nbPktToSend > 0)
+   {
+      WARNING("Purging not empty buffer of packets to send");
+   }
+
+   int i;
+   for (i=0; i<MAX_PACKETS_PREPARED; i++)
+   {
+      if (bufPktToSend[i] != NULL)
+         pkt_del(bufPktToSend[i]);
+   }
+}
+
 void printBuffer()
 {
    if (nbPktToSend == 0)

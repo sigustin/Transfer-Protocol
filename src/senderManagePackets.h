@@ -50,6 +50,13 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length);
 void removeDataPktFromBuffer(uint8_t minSeqnumToKeep);
 
 /*
+ * Deletes every packets in @bufPktToSend
+ * Intended to be called before exiting (error exit or normal exit)
+ * WARNING : there's a function with the same name in receiverManagePackets.h/c
+ */
+void purgeBuffers();
+
+/*
  * Only intended for DEBUG
  * Prints on stderr the content of @bufPktToSend
  */

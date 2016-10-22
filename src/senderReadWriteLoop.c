@@ -35,7 +35,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 
    int bytesRead;
 
-   while (true)
+   while (!lastPktAck)
    {
       //================= Read input file (make new data packet) =========================
       copyFdSet = inputFdSet;
@@ -45,6 +45,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       if (err < 0)
       {
          perror("Couldn't read input file");
+         purgeBuffers();
          return RETURN_FAILURE;
       }
       else if (err > 0)
@@ -54,6 +55,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          if (bytesRead < 0)
          {
             perror("Couldn't read input file");
+            purgeBuffers();
             return RETURN_FAILURE;
          }
          else if (bytesRead == 0)
@@ -95,6 +97,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       if (err < 0)
       {
          perror("Couldn't write on socket");
+         purgeBuffers();
          return RETURN_FAILURE;
       }
       else if (err > 0)
@@ -104,6 +107,8 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          if (sendDataPktFromBuffer(sfd) != RETURN_SUCCESS)
          {
             ERROR("Couldn't write data packet on socket");
+            purgeBuffers();
+            return RETURN_FAILURE;
          }
       }
 
@@ -115,6 +120,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       if (err < 0)
       {
          perror("Couldn't read socket");
+         purgeBuffers();
          return RETURN_FAILURE;
       }
       else if (err > 0)
@@ -124,6 +130,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          if (bytesRead < 0)
          {
             perror("Couldn't receive data from socket");//Connection refused if no receiver is running
+            purgeBuffers();
             return RETURN_FAILURE;
          }
          else if (bytesRead == 0)
@@ -137,13 +144,10 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
             }
          }
       }
-
-      if (lastPktAck)
-      {
-         DEBUG("Exit : last packet acknowledged");
-         break;
-      }
    }
+
+   DEBUG("Exit : last packet acknowledged");
+   purgeBuffers();
 
    return RETURN_SUCCESS;
 }
