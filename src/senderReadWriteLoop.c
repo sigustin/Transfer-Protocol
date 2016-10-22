@@ -58,15 +58,18 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          }
          else if (bytesRead == 0)
          {
-            //Received EOF
-            DEBUG("Read EOF");//BUG sigseg
-            pkt_t* EOFPkt = createDataPkt(NULL, 0);
-            if (EOFPkt == NULL)
+            if (!lastPktSent)
             {
-               ERROR("Couldn't create EOF packet");
+               //Received EOF
+               DEBUG("Read EOF");//BUG sigseg
+               pkt_t* EOFPkt = createDataPkt(NULL, 0);
+               if (EOFPkt == NULL)
+               {
+                  ERROR("Couldn't create EOF packet");
+               }
+               else
+                  putNewPktInBufferToSend(EOFPkt);
             }
-            else
-               putNewPktInBufferToSend(EOFPkt);
          }
          else
          {
@@ -124,9 +127,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
             return RETURN_FAILURE;
          }
          else if (bytesRead == 0)
-         {
-            //Received EOF from socket (possible?)
-         }
+         {}//Received EOF from socket (possible?)
          else
          {
             //Decode data, check packet and update FIFO buffer of packets to send
@@ -138,7 +139,10 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       }
 
       if (lastPktAck)
+      {
+         DEBUG("Exit : last packet acknowledged");
          break;
+      }
    }
 
    return RETURN_SUCCESS;

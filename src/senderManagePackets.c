@@ -174,9 +174,10 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
          DEBUG_FINE("Interpreting valid acknowledment packet");
 
          uint8_t seqnum = pkt_get_seqnum(&pktReceived);
-         removeDataPktFromBuffer(seqnum);
 
          fprintf(stderr, "Acknowledgment has seqnum : %d\n", seqnum);
+
+         removeDataPktFromBuffer(seqnum);
 
          currentReceiverWindowSize = pkt_get_window(&pktReceived);
       }
