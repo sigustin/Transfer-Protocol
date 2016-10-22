@@ -18,4 +18,9 @@ bool isTimerOver(struct timeval beginningTime);
  */
 long elapsedTime(struct timeval beginningTime);
 
+/*
+ * @return : tv in microseconds
+ */
+long getTimeInMicroseconds(struct timeval tv);
+
 #endif //_TIMER_H_
