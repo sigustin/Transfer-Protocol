@@ -49,4 +49,10 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length);
  */
 void removeDataPktFromBuffer(uint8_t minSeqnumToKeep);
 
+/*
+ * Only intended for DEBUG
+ * Prints on stderr the content of @bufPktToSend
+ */
+void printBuffer();
+
 #endif //_SENDER_MANAGE_PACKETS_H_

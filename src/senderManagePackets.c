@@ -59,6 +59,9 @@ ERR_CODE putNewPktInBufferToSend(pkt_t* dataPkt)
    //reset timer at the same index in timers buffer
    bufPktSentTimers[nextIndex].tv_sec = bufPktSentTimers[nextIndex].tv_usec = 0;
 
+   //DEBUG
+   printBuffer();
+
    return RETURN_SUCCESS;
 }
 
@@ -83,7 +86,7 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
     */
    //TODO this will be a go-back-n protocol with this for loop
    int i;
-   for (i=firstBufIndex; i<currentReceiverWindowSize; i++)
+   for (i=0; i<currentReceiverWindowSize && i<nbPktToSend; i++)
    {
       //---- Check timer (at the same index in bufPktSentTimers) is over before sending ----
       //rem : if pkt has not been sent yet, it's sending time will be 0 => isTimerOver == true
@@ -97,7 +100,7 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
       pkt_encode(bufPktToSend[firstBufIndex+i], tmpBufRawPkt, &lengthTmpBuf);
 
       //---- Send packet on socket ------
-      DEBUG_FINE("Send data on the socket");
+      fprintf(stderr, "Send data on the socket (pkt #%d)\n", pkt_get_seqnum(bufPktToSend[firstBufIndex+i]));
       if (sendto(sfd, tmpBufRawPkt, lengthTmpBuf, 0, NULL, 0) != lengthTmpBuf)
       {
          perror("Couldn't write a data packet on the socket");
@@ -193,5 +196,27 @@ void removeDataPktFromBuffer(uint8_t minSeqnumToKeep)
       firstBufIndex++;
       firstBufIndex %= MAX_PACKETS_PREPARED;
       nbPktToSend--;
+   }
+}
+
+void printBuffer()
+{
+   if (nbPktToSend == 0)
+   {
+      DEBUG_FINEST("Buffer of packets to send is empty");
+      return;
+   }
+
+   fprintf(stderr, "Content of the buffer of packets to send\n");
+   int i;
+   for (i=0; i<nbPktToSend; i++)
+   {
+      fprintf(stderr, "\tPacket to send #%d\n", i);
+      fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(bufPktToSend[firstBufIndex+i]));
+      fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(bufPktToSend[firstBufIndex+i]));
+      fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(bufPktToSend[firstBufIndex+i]));
+      fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(bufPktToSend[firstBufIndex+i]));
+      fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(bufPktToSend[firstBufIndex+i]));
+      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(bufPktToSend[firstBufIndex+i]));
    }
 }

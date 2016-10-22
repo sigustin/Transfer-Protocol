@@ -57,4 +57,10 @@ ERR_CODE writePayloadInOutputFile(const int fd);
  */
 bool stillSomethingToWrite();
 
+/*
+ * Intended only for DEBUG
+ * Prints on stderr the content of the buffer @dataPktInSequence
+ */
+void printDataPktInSequenceBuf();
+
 #endif //_RECEIVER_MANAGE_PACKETS_H_

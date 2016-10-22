@@ -11,6 +11,7 @@ struct timeval timerAckSent;
 pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED] = {NULL};//will contain the packets received in sequence and that have to be written on the output file
 int indexFirstDataPkt = 0, nbDataPktToWrite = 0;
 
+bool hasFirstPktBeenReceived = false;
 uint8_t lastSeqnumReceivedInOrder = 0;
 uint32_t lastTimestampReceived = 0;
 
@@ -26,9 +27,9 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
    }
 
    //------------ Decode data --------------------
-   pkt_t pktReceived;
+   pkt_t* pktReceived = malloc(sizeof(pkt_t));
    pkt_status_code errCode;
-   errCode = pkt_decode(data, length, &pktReceived);
+   errCode = pkt_decode(data, length, pktReceived);
    if (errCode != PKT_OK)//Invalid pkt
    {
       switch (errCode)
@@ -54,37 +55,60 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
       }
 
       //TODO ask to send the packet again or ignore?
-      pkt_del(&pktReceived);
+      pkt_del(pktReceived);
       return RETURN_FAILURE;
    }
    else//Valid pkt
    {
-      if (pkt_get_type(&pktReceived) == PTYPE_ACK)
+      if (pkt_get_type(pktReceived) == PTYPE_ACK)
       {
          ERROR("Received acknowledgment from sender");
       }
-      else if (pkt_get_length(&pktReceived) > MAX_PAYLOAD_SIZE)//ignore packet
+      else if (pkt_get_length(pktReceived) > MAX_PAYLOAD_SIZE)//ignore packet
       {}
       else//Valid data pkt
       {
          DEBUG("Interpreting valid data packet");
 
-         lastTimestampReceived = pkt_get_timestamp(&pktReceived);
+         lastTimestampReceived = pkt_get_timestamp(pktReceived);
 
          //------ Check if packet is in sequence ------------------
-         uint8_t seqnum = pkt_get_seqnum(&pktReceived);
+         uint8_t seqnum = pkt_get_seqnum(pktReceived);
          fprintf(stderr, "Valid packet has seqnum : %d\n", seqnum);
-         if (lastSeqnumReceivedInOrder+1 == seqnum)//packet is in sequence
+         if (!hasFirstPktBeenReceived && (seqnum == 0))//first packet received with seqnum == 0
+         {
+            DEBUG_FINE("First data packet received (in sequence)");
+
+            hasFirstPktBeenReceived = true;
+            lastSeqnumReceivedInOrder = 0;
+
+            if (pkt_get_length(pktReceived) == 0)
+            {
+               DEBUG("Received last packet");
+               lastPktReceived = true;
+            }
+            else
+            {
+               int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
+               dataPktInSequence[nextIndex] = pktReceived;
+               nbDataPktToWrite++;
+            }
+         }
+         else if (lastSeqnumReceivedInOrder+1 == seqnum)//packet is in sequence
          {
             DEBUG_FINE("Data packet in sequence");
 
             lastSeqnumReceivedInOrder++;
 
-            if (pkt_get_length(&pktReceived) == 0)
+            if (pkt_get_length(pktReceived) == 0)
+            {
+               DEBUG("Received last packet");
                lastPktReceived = true;
+            }
             else
             {
-               dataPktInSequence[(indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED] = &pktReceived;
+               int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
+               dataPktInSequence[nextIndex] = pktReceived;
                nbDataPktToWrite++;
             }
          }
@@ -93,7 +117,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             DEBUG_FINE("Data packet out-of-sequence");
             //---------- Check if seqnum is in the window and put it in the buffer if it is ------------------
             //TODO check return value
-            putOutOfSequencePktInBuf(&pktReceived);
+            putOutOfSequencePktInBuf(pktReceived);
          }
 
          //--------- Prepare ack and put it in buffer to send ----------------------
@@ -288,7 +312,9 @@ ERR_CODE writePayloadInOutputFile(const int fd)
    {
       DEBUG_FINE("Writing payload in the output file");
 
-      if (write(fd, pkt_get_payload(dataPktInSequence[indexFirstDataPkt]), pkt_get_length(dataPktInSequence[indexFirstDataPkt])) == -1)
+      const uint8_t* payload = pkt_get_payload(dataPktInSequence[indexFirstDataPkt]);
+      size_t length = pkt_get_length(dataPktInSequence[indexFirstDataPkt]);
+      if (write(fd, payload, length) == -1)
       {
          perror("Couldn't write payload in output file");
          return RETURN_FAILURE;
@@ -308,4 +334,26 @@ ERR_CODE writePayloadInOutputFile(const int fd)
 bool stillSomethingToWrite()
 {
    return (nbDataPktToWrite > 0) || (nbAckToSend > 0);
+}
+
+void printDataPktInSequenceBuf()
+{
+   if (nbDataPktToWrite <= 0)
+   {
+      DEBUG_FINE("Buffer of packets to write is empty");
+      return;
+   }
+
+   fprintf(stderr, "Buffer of packets to write :\n");
+   int i;
+   for (i=0; i<nbDataPktToWrite; i++)
+   {
+      fprintf(stderr, "\tPacket #%d\n", i);
+      fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(dataPktInSequence[indexFirstDataPkt+i]));
+      fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(dataPktInSequence[indexFirstDataPkt+i]));
+      fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(dataPktInSequence[indexFirstDataPkt+i]));
+      fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(dataPktInSequence[indexFirstDataPkt+i]));
+      fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(dataPktInSequence[indexFirstDataPkt+i]));
+      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(dataPktInSequence[indexFirstDataPkt+i]));
+   }
 }
