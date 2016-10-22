@@ -1,7 +1,8 @@
 #include "senderReadWriteLoop.h"
 
 bool EOFRead = false;
-bool EOFPktAck = false;
+bool EOFPktSent = false, EOFPktAck = false;
+struct timeval lastTimeAckReceived;
 
 ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 {
@@ -33,6 +34,8 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
    struct timeval tv, tvCopy;
    tv.tv_sec = 0;
    tv.tv_usec = 5000;
+
+   lastTimeAckReceived.tv_sec = lastTimeAckReceived.tv_usec = 0;
 
    int bytesRead;
 
@@ -147,9 +150,20 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
             }
          }
       }
+
+      //In case the acknowledgment for the EOF packet is dropped
+      if (EOFPktSent && getTimeInMicroseconds(lastTimeAckReceived) > 0
+         && (elapsedTime(lastTimeAckReceived) >= TIME_TO_WAIT_WITHOUT_EOF_ACK))
+      {
+         DEBUG("Exit abnormally : no answer from receiver after sending EOF packet");
+         break;
+      }
    }
 
-   DEBUG("Exit normally : last packet acknowledged :)");
+   if (EOFPktAck)
+   {
+      DEBUG("Exit normally : last packet acknowledged :)");
+   }
    purgeBuffers();
 
    return RETURN_SUCCESS;

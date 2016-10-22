@@ -1,6 +1,7 @@
 #include "senderManagePackets.h"
 
-extern bool EOFPktAck;
+extern bool EOFPktSent, EOFPktAck;
+extern struct timeval lastTimeAckReceived;
 
 uint8_t currentReceiverWindowSize = 1;//last window size received from receiver acknowledgments
 
@@ -86,7 +87,6 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
     * firstBufIndex is the index of the first packet in the sending window
     * packets from index firstBufIndex to firstBufIndex+currentReceiverWindowSize should be sent (if they haven't yet been sent or if their timer has ran out)
     */
-   //TODO this will be a go-back-n protocol with this for loop?
    int i;
    for (i=0; i<currentReceiverWindowSize && i<nbPktToSend; i++)
    {
@@ -113,6 +113,10 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
 
       //---------- Reset timer ----------
       gettimeofday(&(bufPktSentTimers[firstBufIndex+i]), NULL);
+
+      //-------- Check if sent packet is EOF packet --------------
+      if (pkt_get_length(bufPktToSend[firstBufIndex+i]) == 0)
+         EOFPktSent = true;
    }
 
    return RETURN_SUCCESS;
@@ -168,6 +172,9 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
       else//Valid acknowledment pkt
       {
          DEBUG_FINE("Interpreting valid acknowledment packet");
+
+         if (EOFPktSent)
+            gettimeofday(&lastTimeAckReceived, NULL);
 
          currentReceiverWindowSize = pkt_get_window(&pktReceived);
 

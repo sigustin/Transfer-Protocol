@@ -17,6 +17,9 @@
 
 #include "defines.h"
 #include "senderManagePackets.h"
+#include "timer.h"
+
+#define TIME_TO_WAIT_WITHOUT_EOF_ACK   RETRANSMISSION_TIME*10
 
 ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile);
 
