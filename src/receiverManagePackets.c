@@ -27,7 +27,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
    }
 
    //------------ Decode data --------------------
-   pkt_t* pktReceived = malloc(sizeof(pkt_t));
+   pkt_t* pktReceived = pkt_new();
    pkt_status_code errCode;
    errCode = pkt_decode(data, length, pktReceived);
    if (errCode != PKT_OK)//Invalid pkt
@@ -215,6 +215,7 @@ ERR_CODE sendAckFromBuffer(const int sfd)
 
    if (nbAckToSend > 1)
    {
+      //BUG sent once too many times (ack #x has been sent -maybe multiple times- and must be sent again before being deleted)
       //send all acknowledgments and remove them except the last one
       while (nbAckToSend >= 1)
       {
