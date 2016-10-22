@@ -1,6 +1,6 @@
 #include "receiverReadWriteLoop.h"
 
-bool lastPktReceived = false;
+bool EOFPktReceived = false;
 
 ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
 {
@@ -35,9 +35,9 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
 
    int bytesRead;
 
-   while (!lastPktReceived || stillSomethingToWrite())
+   while (!EOFPktReceived || stillSomethingToWrite())
    {
-      if (!lastPktReceived)
+      if (!EOFPktReceived)
       {
          //================== Read socket ====================
          copyFdSet = socketFdSet;
@@ -117,7 +117,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
       }
    }
 
-   DEBUG("Exit : last packet received and nothing more to write or acknowledge");
+   DEBUG("Exit normally : last packet received and nothing more to write or acknowledge :)");
    purgeBuffers();
 
    return RETURN_SUCCESS;

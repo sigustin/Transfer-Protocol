@@ -1,6 +1,6 @@
 #include "receiverManagePackets.h"
 
-extern bool lastPktReceived;
+extern bool EOFPktReceived;
 
 pkt_t* acknowledgmentsToSend[MAX_PACKETS_PREPARED] = {NULL};//buffer containing the acknowledments to be send by receiverReadWriteLoop
 int indexFirstAckToSend = 0, nbAckToSend = 0;
@@ -81,17 +81,9 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             hasFirstPktBeenReceived = true;
             lastSeqnumReceivedInOrder = 0;
 
-            if (pkt_get_length(pktReceived) == 0)
-            {
-               DEBUG("Received last packet");
-               lastPktReceived = true;
-            }
-            else
-            {
-               int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
-               dataPktInSequence[nextIndex] = pktReceived;
-               nbDataPktToWrite++;
-            }
+            int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
+            dataPktInSequence[nextIndex] = pktReceived;
+            nbDataPktToWrite++;
          }
          else if ((lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM == seqnum)//packet is in sequence
          {
@@ -99,17 +91,9 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 
             lastSeqnumReceivedInOrder++;//255++ == 0 since the result of the calculation is cast in a uint8_t
 
-            if (pkt_get_length(pktReceived) == 0)
-            {
-               DEBUG("Received last packet");
-               lastPktReceived = true;
-            }
-            else
-            {
-               int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
-               dataPktInSequence[nextIndex] = pktReceived;
-               nbDataPktToWrite++;
-            }
+            int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
+            dataPktInSequence[nextIndex] = pktReceived;
+            nbDataPktToWrite++;
          }
          else//packet is out-of-sequence
          {
@@ -263,7 +247,7 @@ ERR_CODE sendAckFromBuffer(const int sfd)
       }
    }
 
-   if (lastPktReceived)//last acknowledgment has been sent at least once
+   if (EOFPktReceived)//last acknowledgment has been sent at least once
    {
       //delete last acknowledgment
       pkt_del(acknowledgmentsToSend[indexFirstAckToSend]);
@@ -327,14 +311,23 @@ ERR_CODE writePayloadInOutputFile(const int fd)
    {
       DEBUG_FINE("Writing payload in the output file");
 
-      const uint8_t* payload = pkt_get_payload(dataPktInSequence[indexFirstDataPkt]);
-      size_t length = pkt_get_length(dataPktInSequence[indexFirstDataPkt]);
-      if (write(fd, payload, length) == -1)
+      if (pkt_get_length(dataPktInSequence[indexFirstDataPkt]) == 0)
       {
-         perror("Couldn't write payload in output file");
-         return RETURN_FAILURE;
+         DEBUG("Received last packet");
+         EOFPktReceived = true;
+      }
+      else
+      {
+         const uint8_t* payload = pkt_get_payload(dataPktInSequence[indexFirstDataPkt]);
+         size_t length = pkt_get_length(dataPktInSequence[indexFirstDataPkt]);
+         if (write(fd, payload, length) == -1)
+         {
+            perror("Couldn't write payload in output file");
+            return RETURN_FAILURE;
+         }
       }
 
+      //Remove written packet from buffer
       pkt_del(dataPktInSequence[indexFirstDataPkt]);
       dataPktInSequence[indexFirstDataPkt] = NULL;
 

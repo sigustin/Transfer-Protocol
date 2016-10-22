@@ -1,6 +1,7 @@
 #include "senderReadWriteLoop.h"
 
-bool EOFPktSent = false, EOFPktAck = false;
+bool EOFRead = false;
+bool EOFPktAck = false;
 
 ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 {
@@ -37,33 +38,35 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 
    while (!EOFPktAck)
    {
-      //================= Read input file (make new data packet) =========================
-      copyFdSet = inputFdSet;
-      tvCopy = tv;
+      if (!EOFRead)
+      {
+         //================= Read input file (make new data packet) =========================
+         copyFdSet = inputFdSet;
+         tvCopy = tv;
 
-      err = select(inputFile+1, &copyFdSet, NULL, NULL, &tvCopy);
-      if (err < 0)
-      {
-         perror("Couldn't read input file");
-         purgeBuffers();
-         return RETURN_FAILURE;
-      }
-      else if (err > 0)
-      {
-         DEBUG("Trying to read from input file");
-         bytesRead = read(inputFile, bufInput, MAX_PAYLOAD_SIZE);
-         if (bytesRead < 0)
+         err = select(inputFile+1, &copyFdSet, NULL, NULL, &tvCopy);
+         if (err < 0)
          {
             perror("Couldn't read input file");
             purgeBuffers();
             return RETURN_FAILURE;
          }
-         else if (bytesRead == 0)
+         else if (err > 0)
          {
-            if (!EOFPktSent)
+            DEBUG("Trying to read from input file");
+            bytesRead = read(inputFile, bufInput, MAX_PAYLOAD_SIZE);
+            if (bytesRead < 0)
+            {
+               perror("Couldn't read input file");
+               purgeBuffers();
+               return RETURN_FAILURE;
+            }
+            else if (bytesRead == 0)
             {
                //Received EOF
-               DEBUG("Read EOF");//BUG sigseg
+               DEBUG("Read EOF");
+               EOFRead = true;
+
                pkt_t* EOFPkt = createDataPkt(NULL, 0);
                if (EOFPkt == NULL)
                {
@@ -72,19 +75,19 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
                else
                   putNewPktInBufferToSend(EOFPkt);
             }
-         }
-         else
-         {
-            //------------------- Create new data packet ----------------------------
-            pkt_t* newDataPkt = createDataPkt(bufInput, bytesRead);
-            if (newDataPkt == NULL)
-            {
-               ERROR("Couldn't create new data packet");
-            }
             else
             {
-               //----------------- Put data packet in buffer to be sent ----------------------
-               putNewPktInBufferToSend(newDataPkt);//TODO test return value
+               //------------------- Create new data packet ----------------------------
+               pkt_t* newDataPkt = createDataPkt(bufInput, bytesRead);
+               if (newDataPkt == NULL)
+               {
+                  ERROR("Couldn't create new data packet");
+               }
+               else
+               {
+                  //----------------- Put data packet in buffer to be sent ----------------------
+                  putNewPktInBufferToSend(newDataPkt);//TODO test return value
+               }
             }
          }
       }
@@ -146,7 +149,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
       }
    }
 
-   DEBUG("Exit : last packet acknowledged");
+   DEBUG("Exit normally : last packet acknowledged :)");
    purgeBuffers();
 
    return RETURN_SUCCESS;

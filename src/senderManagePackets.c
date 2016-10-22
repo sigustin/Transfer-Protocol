@@ -1,6 +1,6 @@
 #include "senderManagePackets.h"
 
-extern bool EOFPktSent, EOFPktAck;
+extern bool EOFPktAck;
 
 uint8_t currentReceiverWindowSize = 1;//last window size received from receiver acknowledgments
 
@@ -94,10 +94,6 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
       //rem : if pkt has not been sent yet, its sending time will be 0 => isTimerOver == true
       if (!isTimerOver(bufPktSentTimers[firstBufIndex+i]))
          continue;
-
-      //------- Check if it is an EOF packet ---------------
-      if (pkt_get_length(bufPktToSend[firstBufIndex+i]) == 0)
-         EOFPktSent = true;
 
       //---- Create raw data buf from the i_th packet in the sending window --------
       uint8_t* tmpBufRawPkt = malloc(MAX_PKT_SIZE);
