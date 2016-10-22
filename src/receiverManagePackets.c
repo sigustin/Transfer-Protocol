@@ -15,7 +15,7 @@ uint8_t lastSeqnumReceivedInOrder = 0;
 uint32_t lastTimestampReceived = 0;
 
 pkt_t* bufOutOfSequencePkt[MAX_WINDOW_SIZE] = {NULL};//Contains out-of-sequence received packets
-int firstPktBufIndex = 0, nbPktReceivedInBuf = 0;//window size = MAX_WINDOW_SIZE-nbPktReceivedInBuf
+int firstPktBufIndex = 0, nbPktOutOfSequenceInBuf = 0;//window size = MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf
 
 ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 {
@@ -118,6 +118,8 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             //---------- Check if seqnum is in the window and put it in the buffer if it is ------------------
             //TODO check return value
             putOutOfSequencePktInBuf(pktReceived);
+
+            printDataPktOutOfSequenceBuf();
          }
 
          //--------- Prepare ack and put it in buffer to send ----------------------
@@ -147,7 +149,7 @@ pkt_t* createNewAck()
 
    //TODO check return values
    pkt_set_type(ack, PTYPE_ACK);
-   pkt_set_window(ack, (uint8_t) MAX_WINDOW_SIZE-nbPktReceivedInBuf);
+   pkt_set_window(ack, (uint8_t) MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf);
    pkt_set_seqnum(ack, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM);//the seqnum of the next packet that the sender must send
    pkt_set_length(ack, 0);
    pkt_set_timestamp(ack, lastTimestampReceived);
@@ -163,7 +165,7 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
       ERROR("Tried to put no data packet in buffer of received packets");
       return RETURN_FAILURE;
    }
-   if (nbPktReceivedInBuf == MAX_WINDOW_SIZE)//no place in buffer
+   if (nbPktOutOfSequenceInBuf == MAX_WINDOW_SIZE)//no place in buffer
    {
       ERROR("Tried to put data packet in full buffer");
       return RETURN_FAILURE;
@@ -172,24 +174,29 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
    //------ Compute distance between the first seqnum that should be received to make the window move -----
    uint8_t firstSeqnumInBuf = (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM, seqnum = pkt_get_seqnum(dataPkt);
    int distanceSeqnumToFirstWindowSeqnum;
-   if (firstSeqnumInBuf > seqnum)
+   if (seqnum > firstSeqnumInBuf)
       distanceSeqnumToFirstWindowSeqnum = seqnum - firstSeqnumInBuf;
    else
       distanceSeqnumToFirstWindowSeqnum = (NB_DIFFERENT_SEQNUM - firstSeqnumInBuf) + seqnum;
 
    //----- Put packet at the right place in the buffer -------
    if (distanceSeqnumToFirstWindowSeqnum > MAX_WINDOW_SIZE)//out of buffer
-   {}//discard
+   {
+      WARNING("Received packet out of the window of reception");
+      fprintf(stderr, "distance from next to be received : %d\n", distanceSeqnumToFirstWindowSeqnum);
+   }//discard
    else
    {
-      int index = (firstPktBufIndex + distanceSeqnumToFirstWindowSeqnum) % MAX_WINDOW_SIZE;
+      int index = (firstPktBufIndex + distanceSeqnumToFirstWindowSeqnum - 1) % MAX_WINDOW_SIZE;
       if (bufOutOfSequencePkt[index] != NULL)//not supposed to happen
       {
-         ERROR("There was a problem with the buffer containing packets out-of-sequence.\nTried to overwrite data")
-         return RETURN_FAILURE;
+         WARNING("Received out-of-sequence packet already in buffer");
       }
-
-      bufOutOfSequencePkt[index] = dataPkt;
+      else
+      {
+         bufOutOfSequencePkt[index] = dataPkt;
+         nbPktOutOfSequenceInBuf++;
+      }
    }
 
    return RETURN_SUCCESS;
@@ -354,7 +361,7 @@ void purgeBuffers()
    {
       WARNING("Purging not empty buffer of data packets to write on output file");
    }
-   if (nbPktReceivedInBuf > 0)
+   if (nbPktOutOfSequenceInBuf > 0)
    {
       WARNING("Purging not empty buffer of out-of-sequence data packets");
    }
@@ -393,5 +400,27 @@ void printDataPktInSequenceBuf()
       fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(dataPktInSequence[indexFirstDataPkt+i]));
       fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(dataPktInSequence[indexFirstDataPkt+i]));
       fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(dataPktInSequence[indexFirstDataPkt+i]));
+   }
+}
+
+void printDataPktOutOfSequenceBuf()
+{
+   if (nbPktOutOfSequenceInBuf <= 0)
+   {
+      DEBUG_FINE("Buffer of packets out-of-sequence is empty");
+      return;
+   }
+
+   fprintf(stderr, "Buffer of packets out-of-sequence :\n");
+   int i;
+   for (i=0; i<nbPktOutOfSequenceInBuf; i++)
+   {
+      fprintf(stderr, "\tPacket #%d\n", i);
+      fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(bufOutOfSequencePkt[firstPktBufIndex+i]));
+      fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(bufOutOfSequencePkt[firstPktBufIndex+i]));
+      fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex+i]));
+      fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(bufOutOfSequencePkt[firstPktBufIndex+i]));
+      fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(bufOutOfSequencePkt[firstPktBufIndex+i]));
+      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(bufOutOfSequencePkt[firstPktBufIndex+i]));
    }
 }

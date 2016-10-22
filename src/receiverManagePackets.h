@@ -70,4 +70,10 @@ void purgeBuffers();
  */
 void printDataPktInSequenceBuf();
 
+/*
+ * Intended only for DEBUG
+ * Prints on stderr the content of the buffer @bufOutOfSequencePkt
+ */
+void printDataPktOutOfSequenceBuf();
+
 #endif //_RECEIVER_MANAGE_PACKETS_H_
