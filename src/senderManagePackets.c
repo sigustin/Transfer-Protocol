@@ -1,5 +1,7 @@
 #include "senderManagePackets.h"
 
+extern bool lastPktSent, lastPktAck;
+
 uint8_t currentReceiverWindowSize = 1;//last window size received from receiver acknowledgments
 
 pkt_t* bufPktToSend[MAX_PACKETS_PREPARED] = {NULL};//will contain the packets to send /!\ FIFO
@@ -12,9 +14,9 @@ pkt_t* createDataPkt(const uint8_t* payload, uint16_t length)
 {
    DEBUG_FINE("createDataPkt");
 
-   if (payload == NULL || length == 0)
+   if (length > MAX_PAYLOAD_SIZE)
    {
-      ERROR("Tried to create a data packet with no payload");
+      ERROR("Tried to create a data packet with to great payload");
       return NULL;
    }
 
@@ -93,9 +95,14 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
       if (!isTimerOver(bufPktSentTimers[firstBufIndex+i]))
          continue;
 
+      //------- Check if it is an EOF packet ---------------
+      if (pkt_get_length(bufPktToSend[firstBufIndex+i]) == 0)
+         lastPktSent = true;
+
       //---- Create raw data buf from the i_th packet in the sending window --------
       uint8_t* tmpBufRawPkt = malloc(MAX_PKT_SIZE);
       size_t lengthTmpBuf = MAX_PKT_SIZE;
+
       //TODO test return value
       pkt_encode(bufPktToSend[firstBufIndex+i], tmpBufRawPkt, &lengthTmpBuf);
 
@@ -185,6 +192,11 @@ void removeDataPktFromBuffer(uint8_t minSeqnumToKeep)
    //This might not work if two acknowledgments are received in wrong order
    while (nbPktToSend > 0 && pkt_get_seqnum(bufPktToSend[firstBufIndex]) != minSeqnumToKeep)
    {
+      fprintf(stderr, "Removing packet #%d from buffer\n", pkt_get_seqnum(bufPktToSend[firstBufIndex]));
+
+      if (pkt_get_length(bufPktToSend[firstBufIndex]) == 0)
+         lastPktAck = true;
+
       //removing packet at index firstBufIndex if it isn't the next packet to send (i.e. it has already been sent and received)
       pkt_del(bufPktToSend[firstBufIndex]);
       bufPktToSend[firstBufIndex] = NULL;

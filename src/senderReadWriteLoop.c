@@ -1,5 +1,7 @@
 #include "senderReadWriteLoop.h"
 
+bool lastPktSent = false, lastPktAck = false;
+
 ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 {
    DEBUG("senderReadWriteLoop");
@@ -57,7 +59,14 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          else if (bytesRead == 0)
          {
             //Received EOF
-            return RETURN_SUCCESS;
+            DEBUG("Read EOF");//BUG sigseg
+            pkt_t* EOFPkt = createDataPkt(NULL, 0);
+            if (EOFPkt == NULL)
+            {
+               ERROR("Couldn't create EOF packet");
+            }
+            else
+               putNewPktInBufferToSend(EOFPkt);
          }
          else
          {
@@ -127,6 +136,9 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
             }
          }
       }
+
+      if (lastPktAck)
+         break;
    }
 
    return RETURN_SUCCESS;
