@@ -111,7 +111,10 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
       }
 
       if (lastPktReceived && !stillSomethingToWrite())
+      {
+         DEBUG("Exit : last packet received and nothing more to write or acknowledge");
          break;
+      }
    }
 
    return RETURN_SUCCESS;

@@ -7,6 +7,7 @@ extern bool lastPktReceived;
 pkt_t* acknowledgmentsToSend[MAX_PACKETS_PREPARED] = {NULL};//buffer containing the acknowledments to be send by receiverReadWriteLoop
 int indexFirstAckToSend = 0, nbAckToSend = 0;
 struct timeval timerAckSent;
+int lastAckSeqnum = -1;
 
 pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED] = {NULL};//will contain the packets received in sequence and that have to be written on the output file
 int indexFirstDataPkt = 0, nbDataPktToWrite = 0;
@@ -221,11 +222,14 @@ ERR_CODE sendAckFromBuffer(const int sfd)
       {
          DEBUG_FINE("Send acknowledgment");
 
-         if (sendFirstAckFromBuffer(sfd) != RETURN_SUCCESS)
-            return RETURN_FAILURE;
+         if (lastAckSeqnum != pkt_get_seqnum(acknowledgmentsToSend[indexFirstAckToSend]))
+         {
+            if (sendFirstAckFromBuffer(sfd) != RETURN_SUCCESS)
+               return RETURN_FAILURE;
 
-         //reset timer
-         gettimeofday(&timerAckSent, NULL);
+            //reset timer
+            gettimeofday(&timerAckSent, NULL);
+         }
 
          if (nbAckToSend == 1)
             break;
@@ -289,12 +293,16 @@ ERR_CODE sendFirstAckFromBuffer(const int sfd)
       return RETURN_FAILURE;
    }
 
+   fprintf(stderr, "Acknowledgment has seqnum : %d\n", pkt_get_seqnum(acknowledgmentsToSend[indexFirstAckToSend]));
+
    if (sendto(sfd, rawAckToSend, lengthAck, 0, NULL, 0) != lengthAck)
    {
       ERROR("Couldn't write acknowledment on socket");
       free(rawAckToSend);
       return RETURN_FAILURE;
    }
+
+   lastAckSeqnum = pkt_get_seqnum(acknowledgmentsToSend[indexFirstAckToSend]);
 
    free(rawAckToSend);
 
