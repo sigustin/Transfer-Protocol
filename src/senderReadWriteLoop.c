@@ -39,9 +39,12 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 
    int bytesRead;
 
+   bool stopTryingToReadInput = false;
+   pkt_t* savedNewPktData = NULL;
+
    while (!EOFPktAck)
    {
-      if (!EOFRead)
+      if (!EOFRead && !stopTryingToReadInput)
       {
          //================= Read input file (make new data packet) =========================
          copyFdSet = inputFdSet;
@@ -93,6 +96,8 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
                   {
                      ERROR("Couldn't put new packet in buffer");
                      //TODO wait for buffer to be ready
+                     stopTryingToReadInput = true;
+                     savedNewPktData = newDataPkt;
                   }
                }
             }
@@ -119,6 +124,20 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
             ERROR("Couldn't write data packet on socket");
             purgeBuffers();
             return RETURN_FAILURE;
+         }
+         else
+         {
+            if (stopTryingToReadInput)
+            {
+               stopTryingToReadInput = false;
+               if (putNewPktInBufferToSend(savedNewPktData) != RETURN_SUCCESS)
+               {
+                  ERROR("There is a problem with the buffer of packets to send (full when it shouldn't be)");
+                  purgeBuffers();
+                  return RETURN_FAILURE;
+               }
+               savedNewPktData = NULL;
+            }
          }
       }
 
