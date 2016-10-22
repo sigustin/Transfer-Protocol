@@ -1,6 +1,6 @@
 #include "senderManagePackets.h"
 
-extern bool lastPktSent, lastPktAck;
+extern bool EOFPktSent, EOFPktAck;
 
 uint8_t currentReceiverWindowSize = 1;//last window size received from receiver acknowledgments
 
@@ -91,13 +91,13 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
    for (i=0; i<currentReceiverWindowSize && i<nbPktToSend; i++)
    {
       //---- Check timer (at the same index in bufPktSentTimers) is over before sending ----
-      //rem : if pkt has not been sent yet, it's sending time will be 0 => isTimerOver == true
+      //rem : if pkt has not been sent yet, its sending time will be 0 => isTimerOver == true
       if (!isTimerOver(bufPktSentTimers[firstBufIndex+i]))
          continue;
 
       //------- Check if it is an EOF packet ---------------
       if (pkt_get_length(bufPktToSend[firstBufIndex+i]) == 0)
-         lastPktSent = true;
+         EOFPktSent = true;
 
       //---- Create raw data buf from the i_th packet in the sending window --------
       uint8_t* tmpBufRawPkt = malloc(MAX_PKT_SIZE);
@@ -196,7 +196,7 @@ void removeDataPktFromBuffer(uint8_t minSeqnumToKeep)
       fprintf(stderr, "Removing packet #%d from buffer\n", pkt_get_seqnum(bufPktToSend[firstBufIndex]));
 
       if (pkt_get_length(bufPktToSend[firstBufIndex]) == 0)
-         lastPktAck = true;
+         EOFPktAck = true;
 
       //removing packet at index firstBufIndex if it isn't the next packet to send (i.e. it has already been sent and received)
       pkt_del(bufPktToSend[firstBufIndex]);

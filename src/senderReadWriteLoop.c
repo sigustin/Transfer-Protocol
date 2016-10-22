@@ -1,6 +1,6 @@
 #include "senderReadWriteLoop.h"
 
-bool lastPktSent = false, lastPktAck = false;
+bool EOFPktSent = false, EOFPktAck = false;
 
 ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 {
@@ -35,7 +35,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 
    int bytesRead;
 
-   while (!lastPktAck)
+   while (!EOFPktAck)
    {
       //================= Read input file (make new data packet) =========================
       copyFdSet = inputFdSet;
@@ -60,7 +60,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          }
          else if (bytesRead == 0)
          {
-            if (!lastPktSent)
+            if (!EOFPktSent)
             {
                //Received EOF
                DEBUG("Read EOF");//BUG sigseg
