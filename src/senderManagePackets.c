@@ -239,7 +239,7 @@ void printBuffer()
    int i;
    for (i=0; i<nbPktToSend; i++)
    {
-      fprintf(stderr, "\tPacket to send #%d\n", i);
+      fprintf(stderr, "\tPacket to send #%d (%d)\n", pkt_get_seqnum(bufPktToSend[firstBufIndex+i]), i);
       fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(bufPktToSend[firstBufIndex+i]));
       fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(bufPktToSend[firstBufIndex+i]));
       fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(bufPktToSend[firstBufIndex+i]));
