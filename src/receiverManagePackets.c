@@ -102,6 +102,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
                DEBUG_FINE("Data packet in sequence");
 
                lastSeqnumReceivedInOrder++;//255++ == 0 since the result of the calculation is cast in a uint8_t
+               fprintf(stderr, "lastSeqnumReceivedInOrder : %d\n", lastSeqnumReceivedInOrder);
 
                int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
                dataPktInSequence[nextIndex] = pktReceived;
@@ -371,11 +372,14 @@ ERR_CODE writePayloadInOutputFile(const int fd)
 
 void checkOutOfSequencePkt()
 {
+   DEBUG_FINE("checkOutOfSequencePkt");
+
    if (nbPktOutOfSequenceInBuf <= 0)
       return;
 
-   while ((pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]) == (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM)
-         && (nbPktOutOfSequenceInBuf > 0) && (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED))
+   while (((nbPktOutOfSequenceInBuf > 0)
+         && pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]) == (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM)
+         && (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED))
    {
       lastSeqnumReceivedInOrder = pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]);
 
