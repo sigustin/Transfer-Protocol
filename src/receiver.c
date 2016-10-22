@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 	int fileToWriteFd = -1;
 	if (fileToWriteName != NULL)
 	{
-		fileToWriteFd = open(fileToWriteName, O_WRONLY|O_CREAT);
+		fileToWriteFd = open(fileToWriteName, O_WRONLY|O_CREAT|O_TRUNC);
 		if (fileToWriteFd < 0)
 		{
 			perror("Couldn't open file to write");
