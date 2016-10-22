@@ -55,12 +55,19 @@ ERR_CODE putNewPktInBufferToSend(pkt_t* dataPkt)
       return RETURN_FAILURE;
    }
 
-   //put pkt in buffer
-   int nextIndex = (firstBufIndex+nbPktToSend)%MAX_PACKETS_PREPARED;
-   bufPktToSend[nextIndex] = dataPkt;
-   nbPktToSend++;
-   //reset timer at the same index in timers buffer
-   bufPktSentTimers[nextIndex].tv_sec = bufPktSentTimers[nextIndex].tv_usec = 0;
+   if (nbPktToSend < MAX_PACKETS_PREPARED)
+   {
+      //put pkt in buffer
+      int nextIndex = (firstBufIndex+nbPktToSend)%MAX_PACKETS_PREPARED;
+      bufPktToSend[nextIndex] = dataPkt;
+      nbPktToSend++;
+      //reset timer at the same index in timers buffer
+      bufPktSentTimers[nextIndex].tv_sec = bufPktSentTimers[nextIndex].tv_usec = 0;
+   }
+   else
+   {
+      ERROR("Tried to put new packet in full buffer");
+   }
 
    //DEBUG
    printBuffer();
@@ -159,7 +166,6 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
             break;
       }
 
-      //TODO ask packet to be sent again or ignore packet?
       pkt_del(&pktReceived);
       return RETURN_FAILURE;
    }

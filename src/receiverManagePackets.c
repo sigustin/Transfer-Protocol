@@ -76,31 +76,44 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
          fprintf(stderr, "Valid packet has seqnum : %d\n", seqnum);
          if (!hasFirstPktBeenReceived && (seqnum == 0))//first packet received with seqnum == 0
          {
-            DEBUG_FINE("First data packet received (in sequence)");
+            if (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED)
+            {
+               DEBUG_FINE("First data packet received (in sequence)");
 
-            hasFirstPktBeenReceived = true;
-            lastSeqnumReceivedInOrder = 0;
+               hasFirstPktBeenReceived = true;
+               lastSeqnumReceivedInOrder = 0;
 
-            int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
-            dataPktInSequence[nextIndex] = pktReceived;
-            nbDataPktToWrite++;
+               int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
+               dataPktInSequence[nextIndex] = pktReceived;
+               nbDataPktToWrite++;
 
-            //Check if next packets have already been received
-            checkOutOfSequencePkt();
+               //Check if next packets have already been received
+               checkOutOfSequencePkt();
+            }
+            else
+            {
+               ERROR("Received in sequence packet while buffer of packets to write is full");
+            }
          }
          else if ((lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM == seqnum)//packet is in sequence
          {
-            DEBUG_FINE("Data packet in sequence");
+            if (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED)
+            {
+               DEBUG_FINE("Data packet in sequence");
 
-            lastSeqnumReceivedInOrder++;//255++ == 0 since the result of the calculation is cast in a uint8_t
+               lastSeqnumReceivedInOrder++;//255++ == 0 since the result of the calculation is cast in a uint8_t
 
-            int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
-            dataPktInSequence[nextIndex] = pktReceived;
-            nbDataPktToWrite++;
-            //TODO check this is not bigger then MAX_PACKETS_PREPARED (check everywhere)
+               int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
+               dataPktInSequence[nextIndex] = pktReceived;
+               nbDataPktToWrite++;
 
-            //Check if next packets have already been received
-            checkOutOfSequencePkt();
+               //Check if next packets have already been received
+               checkOutOfSequencePkt();
+            }
+            else
+            {
+               ERROR("Received in sequence packet while buffer of packets to write is full");
+            }
          }
          else//packet is out-of-sequence
          {
@@ -113,16 +126,24 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             printDataPktOutOfSequenceBuf();
          }
 
-         //--------- Prepare ack and put it in buffer to send ----------------------
-         pkt_t* newAck = createNewAck();
-         if (newAck == NULL)
+         if (nbAckToSend+1 < MAX_PACKETS_PREPARED)
          {
-            ERROR("Couldn't create new acknowledgment");
-            return RETURN_FAILURE;
-         }
+            //--------- Prepare ack and put it in buffer to send ----------------------
+            pkt_t* newAck = createNewAck();
+            if (newAck == NULL)
+            {
+               ERROR("Couldn't create new acknowledgment");
+               return RETURN_FAILURE;
+            }
 
-         acknowledgmentsToSend[(indexFirstAckToSend+nbAckToSend)%MAX_PACKETS_PREPARED] = newAck;
-         nbAckToSend++;
+            acknowledgmentsToSend[(indexFirstAckToSend+nbAckToSend)%MAX_PACKETS_PREPARED] = newAck;
+            nbAckToSend++;
+         }
+         else
+         {
+            ERROR("Tried to make new acknowledgment while buffer of acknowledgments to send is full");
+            //remove first ack from list or wait for them to be sent?
+         }
       }
    }
 
@@ -181,7 +202,7 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
    else
    {
       int index = (firstPktBufIndex + distanceSeqnumToFirstWindowSeqnum - 1) % MAX_WINDOW_SIZE;
-      if (bufOutOfSequencePkt[index] != NULL)//not supposed to happen
+      if (bufOutOfSequencePkt[index] != NULL)
       {
          WARNING("Received out-of-sequence packet already in buffer");
       }
@@ -353,9 +374,11 @@ void checkOutOfSequencePkt()
    if (nbPktOutOfSequenceInBuf <= 0)
       return;
 
-   while (pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]) == (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM
-         && nbPktOutOfSequenceInBuf > 0)
+   while ((pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]) == (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM)
+         && (nbPktOutOfSequenceInBuf > 0) && (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED))
    {
+      lastSeqnumReceivedInOrder = pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]);
+
       //put this packet in the buffer of in sequence packets (to write in the output file)
       int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
       dataPktInSequence[nextIndex] = bufOutOfSequencePkt[firstPktBufIndex];
