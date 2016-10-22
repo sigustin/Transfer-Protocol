@@ -1,7 +1,5 @@
 #include "receiverManagePackets.h"
 
-//TODO purge buffers when an error terminates the program
-
 extern bool lastPktReceived;
 
 pkt_t* acknowledgmentsToSend[MAX_PACKETS_PREPARED] = {NULL};//buffer containing the acknowledments to be send by receiverReadWriteLoop
@@ -95,11 +93,11 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
                nbDataPktToWrite++;
             }
          }
-         else if (lastSeqnumReceivedInOrder+1 == seqnum)//packet is in sequence
+         else if ((lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM == seqnum)//packet is in sequence
          {
             DEBUG_FINE("Data packet in sequence");
 
-            lastSeqnumReceivedInOrder++;
+            lastSeqnumReceivedInOrder++;//255++ == 0 since the result of the calculation is cast in a uint8_t
 
             if (pkt_get_length(pktReceived) == 0)
             {
@@ -116,6 +114,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
          else//packet is out-of-sequence
          {
             DEBUG_FINE("Data packet out-of-sequence");
+            fprintf(stderr, "last seqnum received in sequence : %d\tnext to be received : %d\treceived : %d\n", lastSeqnumReceivedInOrder, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM, seqnum);
             //---------- Check if seqnum is in the window and put it in the buffer if it is ------------------
             //TODO check return value
             putOutOfSequencePktInBuf(pktReceived);
@@ -149,7 +148,7 @@ pkt_t* createNewAck()
    //TODO check return values
    pkt_set_type(ack, PTYPE_ACK);
    pkt_set_window(ack, (uint8_t) MAX_WINDOW_SIZE-nbPktReceivedInBuf);
-   pkt_set_seqnum(ack, lastSeqnumReceivedInOrder+1);//the seqnum of the next packet that the sender must send
+   pkt_set_seqnum(ack, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM);//the seqnum of the next packet that the sender must send
    pkt_set_length(ack, 0);
    pkt_set_timestamp(ack, lastTimestampReceived);
    pkt_set_payload(ack, NULL, 0);//sets crc
@@ -171,7 +170,7 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
    }
 
    //------ Compute distance between the first seqnum that should be received to make the window move -----
-   uint8_t firstSeqnumInBuf = lastSeqnumReceivedInOrder+1, seqnum = pkt_get_seqnum(dataPkt);
+   uint8_t firstSeqnumInBuf = (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM, seqnum = pkt_get_seqnum(dataPkt);
    int distanceSeqnumToFirstWindowSeqnum;
    if (firstSeqnumInBuf > seqnum)
       distanceSeqnumToFirstWindowSeqnum = seqnum - firstSeqnumInBuf;
