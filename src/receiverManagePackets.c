@@ -105,7 +105,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
          else//packet is out-of-sequence
          {
             DEBUG_FINE("Data packet out-of-sequence");
-            fprintf(stderr, "last seqnum received in sequence : %d\tnext to be received : %d\treceived : %d\n", lastSeqnumReceivedInOrder, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM, seqnum);
+            fprintf(stderr, "last seqnum received in sequence : %d\tnext to be received : %d\treceived : %d (ptr : %p)\n", lastSeqnumReceivedInOrder, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM, seqnum, pktReceived);
             //---------- Check if seqnum is in the window and put it in the buffer if it is ------------------
             //TODO check return value
             putOutOfSequencePktInBuf(pktReceived);
@@ -151,6 +151,8 @@ pkt_t* createNewAck()
 
 ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
 {
+   DEBUG_FINE("putOutOfSequencePktInBuf");
+
    if (dataPkt == NULL)
    {
       ERROR("Tried to put no data packet in buffer of received packets");
@@ -410,16 +412,18 @@ void printDataPktInSequenceBuf()
    }
 
    fprintf(stderr, "Buffer of packets to write :\n");
-   int i;
-   for (i=0; i<nbDataPktToWrite; i++)
+   int i, index;
+   for (i=0, index=indexFirstDataPkt; i<nbDataPktToWrite; i++, index++)
    {
+      if (index == MAX_PACKETS_PREPARED)
+         index = 0;
       fprintf(stderr, "\tPacket #%d\n", i);
-      fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(dataPktInSequence[indexFirstDataPkt+i]));
-      fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(dataPktInSequence[indexFirstDataPkt+i]));
-      fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(dataPktInSequence[indexFirstDataPkt+i]));
-      fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(dataPktInSequence[indexFirstDataPkt+i]));
-      fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(dataPktInSequence[indexFirstDataPkt+i]));
-      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(dataPktInSequence[indexFirstDataPkt+i]));
+      fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(dataPktInSequence[index]));
+      fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(dataPktInSequence[index]));
+      fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(dataPktInSequence[index]));
+      fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(dataPktInSequence[index]));
+      fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(dataPktInSequence[index]));
+      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(dataPktInSequence[index]));
    }
 }
 
@@ -431,16 +435,18 @@ void printDataPktOutOfSequenceBuf()
       return;
    }
 
-   fprintf(stderr, "Buffer of packets out-of-sequence :\n");
-   int i;
-   for (i=0; i<nbPktOutOfSequenceInBuf; i++)
+   fprintf(stderr, "Buffer of packets out-of-sequence (%d) :\n", nbPktOutOfSequenceInBuf);
+   int i, index;
+   for (i=0, index=firstPktBufIndex; i<nbPktOutOfSequenceInBuf; i++, index++)
    {
-      fprintf(stderr, "\tPacket #%d\n", i);
-      fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(bufOutOfSequencePkt[firstPktBufIndex+i]));
-      fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(bufOutOfSequencePkt[firstPktBufIndex+i]));
-      fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex+i]));
-      fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(bufOutOfSequencePkt[firstPktBufIndex+i]));
-      fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(bufOutOfSequencePkt[firstPktBufIndex+i]));
-      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(bufOutOfSequencePkt[firstPktBufIndex+i]));
+      if (index == MAX_WINDOW_SIZE)
+         index = 0;
+      fprintf(stderr, "\tPacket #%d (ptr : %p) (index %d)\n", i, bufOutOfSequencePkt[index], index);
+      fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(bufOutOfSequencePkt[index]));
+      fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(bufOutOfSequencePkt[index]));
+      fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(bufOutOfSequencePkt[index]));
+      fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(bufOutOfSequencePkt[index]));
+      fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(bufOutOfSequencePkt[index]));
+      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(bufOutOfSequencePkt[index]));
    }
 }
