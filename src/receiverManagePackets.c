@@ -84,6 +84,9 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
             dataPktInSequence[nextIndex] = pktReceived;
             nbDataPktToWrite++;
+
+            //Check if next packets have already been received
+            checkOutOfSequencePkt();
          }
          else if ((lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM == seqnum)//packet is in sequence
          {
@@ -94,6 +97,10 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
             dataPktInSequence[nextIndex] = pktReceived;
             nbDataPktToWrite++;
+            //TODO check this is not bigger then MAX_PACKETS_PREPARED (check everywhere)
+
+            //Check if next packets have already been received
+            checkOutOfSequencePkt();
          }
          else//packet is out-of-sequence
          {
@@ -337,6 +344,26 @@ ERR_CODE writePayloadInOutputFile(const int fd)
    }
 
    return RETURN_SUCCESS;
+}
+
+void checkOutOfSequencePkt()
+{
+   if (nbPktOutOfSequenceInBuf <= 0)
+      return;
+
+   while (pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]) == (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM
+         && nbPktOutOfSequenceInBuf > 0)
+   {
+      //put this packet in the buffer of in sequence packets (to write in the output file)
+      int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
+      dataPktInSequence[nextIndex] = bufOutOfSequencePkt[firstPktBufIndex];
+      nbDataPktToWrite++;
+
+      //remove packet from out-of-sequence buffer
+      bufOutOfSequencePkt[firstPktBufIndex] = NULL;
+      firstPktBufIndex++;
+      nbPktOutOfSequenceInBuf--;
+   }
 }
 
 bool stillSomethingToWrite()

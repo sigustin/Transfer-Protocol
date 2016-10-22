@@ -52,6 +52,12 @@ ERR_CODE sendFirstAckFromBuffer(const int sfd);
 ERR_CODE writePayloadInOutputFile(const int fd);
 
 /*
+ * (Called after a new in sequence packet is received)
+ * Checks if the out-of-sequence packets in the buffer are still out-of-sequence
+ */
+void checkOutOfSequencePkt();
+
+/*
  * @return :   true if there's still something to write in the output file or if there are still acknowledgments that have to be sent
  *             false otherwise
  */
