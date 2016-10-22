@@ -22,7 +22,7 @@ receiver.o : $(SRC)/receiver.c $(SRC)/defines.h createConnection.o receiverReadW
 createConnection.o : $(SRC)/createConnection.c $(SRC)/defines.h
 	$(CC) $(CFLAGS) -c $(SRC)/createConnection.c
 
-senderReadWriteLoop.o : $(SRC)/senderReadWriteLoop.c $(SRC)/defines.h senderManagePackets.o
+senderReadWriteLoop.o : $(SRC)/senderReadWriteLoop.c $(SRC)/defines.h senderManagePackets.o timer.o
 	$(CC) $(CFLAGS) -c $(SRC)/senderReadWriteLoop.c
 
 receiverReadWriteLoop.o : $(SRC)/receiverReadWriteLoop.c $(SRC)/defines.h receiverManagePackets.o
