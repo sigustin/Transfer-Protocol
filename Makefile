@@ -28,7 +28,7 @@ senderReadWriteLoop.o : $(SRC)/senderReadWriteLoop.c $(SRC)/defines.h senderMana
 receiverReadWriteLoop.o : $(SRC)/receiverReadWriteLoop.c $(SRC)/defines.h receiverManagePackets.o
 	$(CC) $(CFLAGS) -c $(SRC)/receiverReadWriteLoop.c
 
-packets.o : $(SRC)/packets.c $(SRC)/defines.h
+packets.o : $(SRC)/packets.c $(SRC)/packets.h $(SRC)/defines.h
 	$(CC) $(CFLAGS) -c $(SRC)/packets.c $(LFLAGS)
 
 senderManagePackets.o : $(SRC)/senderManagePackets.c $(SRC)/defines.h packets.o timer.o
