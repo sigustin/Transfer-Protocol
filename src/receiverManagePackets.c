@@ -16,9 +16,9 @@ uint32_t lastTimestampReceived = 0;
 
 /*
  * The next buffer (for out-of-sequence packets) works as follows :
- * @firstPktBufIndex contains the index of the packet with seqnum == nextSeqnumToBeReceived+1
+ * @indexFirstOutOfSequencePkt contains the index of the packet with seqnum == nextSeqnumToBeReceived+1
  * Then, when an out-of-sequence packet arrives, it is placed according to its seqnum.
- * When an in-sequence packet arrives, @firstPktBufIndex is updated and we check if we can't move a packet
+ * When an in-sequence packet arrives, @indexFirstOutOfSequencePkt is updated and we check if we can't move a packet
  * from this buffer to the buffer of packets to write in the output file in the next loop.
  * EXAMPLE :   say the next seqnum that should arrive is 10,
  *             say we have already received packet with seqnum 13 and 15
@@ -26,16 +26,16 @@ uint32_t lastTimestampReceived = 0;
  *             say the buffer for out-of-sequence packets has a size of 8
  *
  *                Before we add packet #12, the buffer should look like :
- *                      x x X x 13 x 15 x       where @firstPktBufIndex is the index of X (x and X represent NULL here)
+ *                      x x X x 13 x 15 x       where @indexFirstOutOfSequencePkt is the index of X (x and X represent NULL here)
  *
  *                After we add packet #12, the buffer should look like :
- *                      x x X 12 13 x 15 x      (@firstPktBufIndex hasn't changed)
+ *                      x x X 12 13 x 15 x      (@indexFirstOutOfSequencePkt hasn't changed)
  *
- *                If we now receive packet #10, @firstPktBufIndex will be incremented
+ *                If we now receive packet #10, @indexFirstOutOfSequencePkt will be incremented
  *                to be the index of packet #12 in the buffer.
  *                If we then receive packet #11 (which is the next that should be received),
  *                it is accepted as the next packet in sequence and, as any time an in-sequence packet
- *                is received, we check if the packet at index @firstPktBufIndex in the out-of-sequence
+ *                is received, we check if the packet at index @indexFirstOutOfSequencePkt in the out-of-sequence
  *                buffer is not NULL.
  *                Here packet #12 is present in the buffer, we can then switch it to the buffer of
  *                things to write in the output file. We can then do the same thing for packet #13
@@ -54,10 +54,9 @@ uint32_t lastTimestampReceived = 0;
  * Note that the size of the window correspond to the number of places left in that buffer, meaning that
  * the sender shouldn't try to send more packets than the number of places in the buffer (though if these packets
  * are out of the window, they will be discarded and the window won't shrink).
- *
  */
 pkt_t* bufOutOfSequencePkt[MAX_WINDOW_SIZE] = {NULL};//Contains out-of-sequence received packets
-int firstPktBufIndex = 0, nbPktOutOfSequenceInBuf = 0;//window size = MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf
+int indexFirstOutOfSequencePkt = 0, nbPktOutOfSequenceInBuf = 0;//window size = MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf
 
 ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 {
@@ -113,7 +112,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 
          //------ Check if packet is in sequence ------------------
          uint8_t seqnum = pkt_get_seqnum(pktReceived);
-         fprintf(stderr, "Interpreting valid packet #%d while next seqnum to receive : %d \n", seqnum, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM);
+         fprintf(stderr, "DEBUG : Interpreting valid packet #%d while next seqnum to receive : %d \n", seqnum, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM);
          if (!hasFirstPktBeenReceived && (seqnum == 0))//first packet received with seqnum == 0
          {
             if (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED)
@@ -129,8 +128,8 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 
                //Check if next packets have already been received
                checkOutOfSequencePkt();
-               firstPktBufIndex++;
-               DEBUG("Out check 1");
+               indexFirstOutOfSequencePkt++;
+               indexFirstOutOfSequencePkt %= MAX_WINDOW_SIZE;
             }
             else
             {
@@ -151,8 +150,8 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
 
                //Updating out-of-sequence buffer
                checkOutOfSequencePkt();
-               firstPktBufIndex++;
-               DEBUG("Out check 2");
+               indexFirstOutOfSequencePkt++;
+               indexFirstOutOfSequencePkt %= MAX_WINDOW_SIZE;
             }
             else
             {
@@ -232,7 +231,7 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
    //------ Compute distance between the first seqnum that should be received to make the window move -----
    uint8_t firstSeqnumInBuf = (lastSeqnumReceivedInOrder+2)%NB_DIFFERENT_SEQNUM, seqnum = pkt_get_seqnum(dataPkt);
    int distanceSeqnumToFirstWindowSeqnum;
-   if (seqnum > firstSeqnumInBuf)
+   if (seqnum >= firstSeqnumInBuf)
       distanceSeqnumToFirstWindowSeqnum = seqnum - firstSeqnumInBuf;
    else
       distanceSeqnumToFirstWindowSeqnum = (NB_DIFFERENT_SEQNUM - firstSeqnumInBuf) + seqnum;
@@ -245,7 +244,8 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
    }//discard
    else
    {
-      int index = (firstPktBufIndex + distanceSeqnumToFirstWindowSeqnum) % MAX_WINDOW_SIZE;
+      int index = (indexFirstOutOfSequencePkt + distanceSeqnumToFirstWindowSeqnum) % MAX_WINDOW_SIZE;
+      fprintf(stderr, "indexFirstOutOfSequencePkt : %d\tindex added : %d\n", indexFirstOutOfSequencePkt, index);
       if (bufOutOfSequencePkt[index] != NULL)
       {
          WARNING("Received out-of-sequence packet already in buffer");
@@ -422,32 +422,28 @@ void checkOutOfSequencePkt()
    if (nbPktOutOfSequenceInBuf <= 0)
       return;
 
-   fprintf(stderr, "nbPktOutOfSequenceInBuf : %d\tfirst out of sequence : %p\n", nbPktOutOfSequenceInBuf, bufOutOfSequencePkt[firstPktBufIndex]);
+   fprintf(stderr, "indexFirstOutOfSequencePkt : %d\n", indexFirstOutOfSequencePkt);
 
-   while ((bufOutOfSequencePkt[firstPktBufIndex] != NULL) && (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED))
+   while ((bufOutOfSequencePkt[indexFirstOutOfSequencePkt] != NULL) && (nbDataPktToWrite+1 < MAX_PACKETS_PREPARED))
    {
-      lastSeqnumReceivedInOrder++;//equivalent to lastSeqnumReceivedInOrder = pkt_get_seqnum(bufOutOfSequencePkt[firstPktBufIndex]);
+      lastSeqnumReceivedInOrder++;//equivalent to lastSeqnumReceivedInOrder = pkt_get_seqnum(bufOutOfSequencePkt[indexFirstOutOfSequencePkt]);
 
       fprintf(stderr, "Taking pkt #%d out of out-of-sequence buffer\n", lastSeqnumReceivedInOrder);
 
       //put this packet in the buffer of in-sequence packets (to write in the output file)
       int nextIndex = (indexFirstDataPkt+nbDataPktToWrite)%MAX_PACKETS_PREPARED;
-      dataPktInSequence[nextIndex] = bufOutOfSequencePkt[firstPktBufIndex];
+      dataPktInSequence[nextIndex] = bufOutOfSequencePkt[indexFirstOutOfSequencePkt];
       nbDataPktToWrite++;
 
       //remove packet from out-of-sequence buffer
-      bufOutOfSequencePkt[firstPktBufIndex] = NULL;
-      firstPktBufIndex++;
-      firstPktBufIndex %= MAX_WINDOW_SIZE;
+      bufOutOfSequencePkt[indexFirstOutOfSequencePkt] = NULL;
+      indexFirstOutOfSequencePkt++;
+      indexFirstOutOfSequencePkt %= MAX_WINDOW_SIZE;
       nbPktOutOfSequenceInBuf--;
-      if (nbPktOutOfSequenceInBuf)//shouldn't be possible to happen
+      if (nbPktOutOfSequenceInBuf < 0)//shouldn't be possible to happen
       {
          ERROR("Number of packets in the out-of-sequence buffer is negative");
       }
-
-      printDataPktOutOfSequenceBuf();
-
-      fprintf(stderr, "nbPktOutOfSequenceInBuf : %d\tfirst out of sequence : %p\n", nbPktOutOfSequenceInBuf, bufOutOfSequencePkt[firstPktBufIndex]);
    }
 }
 
@@ -519,12 +515,11 @@ void printDataPktOutOfSequenceBuf()
    }
 
    fprintf(stderr, "Seqnums in buffer of packets out-of-sequence (%d packets) :\t\n", nbPktOutOfSequenceInBuf);
-   int i, index;
-   for (i=0, index=firstPktBufIndex; i<nbPktOutOfSequenceInBuf; i++, index++)
+   int i;
+   for (i=0; i<MAX_WINDOW_SIZE; i++)
    {
-      if (index == MAX_WINDOW_SIZE)
-         index = 0;
-      fprintf(stderr, "%d ", pkt_get_seqnum(bufOutOfSequencePkt[index]));
+      if (bufOutOfSequencePkt[i] != NULL)
+         fprintf(stderr, "%d ", pkt_get_seqnum(bufOutOfSequencePkt[i]));
       /*
       fprintf(stderr, "\tPacket #%d (ptr : %p) (index %d)\n", i, bufOutOfSequencePkt[index], index);
       fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(bufOutOfSequencePkt[index]));
