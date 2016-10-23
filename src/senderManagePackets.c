@@ -248,12 +248,14 @@ void printBuffer()
    {
       if (index == MAX_PACKETS_PREPARED)
          index = 0;
-      fprintf(stderr, "\tPacket to send #%d (index %d)\n", pkt_get_seqnum(bufPktToSend[index]), index);
+      fprintf(stderr, "%d ", pkt_get_seqnum(bufPktToSend[index]));
+      /*fprintf(stderr, "\tPacket to send #%d (index %d)\n", pkt_get_seqnum(bufPktToSend[index]), index);
       fprintf(stderr, "\t\ttype : %d\n", pkt_get_type(bufPktToSend[index]));
       fprintf(stderr, "\t\twindow : %d\n", pkt_get_window(bufPktToSend[index]));
       fprintf(stderr, "\t\tseqnum : %d\n", pkt_get_seqnum(bufPktToSend[index]));
       fprintf(stderr, "\t\tlength : %d\n", pkt_get_length(bufPktToSend[index]));
       fprintf(stderr, "\t\ttimestamp : %d\n", pkt_get_timestamp(bufPktToSend[index]));
-      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(bufPktToSend[index]));
+      fprintf(stderr, "\t\tcrc : %d\n", pkt_get_crc(bufPktToSend[index]));*/
    }
+   fprintf(stderr, "\n");
 }
