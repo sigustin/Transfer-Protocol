@@ -146,11 +146,6 @@ ERR_CODE putNewPktInBufferToSend(pkt_t* dataPkt)
       ERROR("Tried to put empty packet in buffer of packets ready to be sent");
       return RETURN_FAILURE;
    }
-   if (nbPktToSend >= MAX_PACKETS_PREPARED-1)
-   {
-      ERROR("Tried to prepare too much data packets (buffer full)");
-      return RETURN_FAILURE;
-   }
 
    if (nbPktToSend < MAX_PACKETS_PREPARED)
    {
@@ -163,7 +158,8 @@ ERR_CODE putNewPktInBufferToSend(pkt_t* dataPkt)
    }
    else
    {
-      ERROR("Tried to put new packet in full buffer");
+      ERROR("Tried to put new data packet in full buffer");
+      return RETURN_FAILURE;
    }
 
    //DEBUG
@@ -191,13 +187,17 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
     * firstBufIndex is the index of the first packet in the sending window
     * packets from index firstBufIndex to firstBufIndex+currentReceiverWindowSize should be sent (if they haven't yet been sent or if their timer has ran out)
     */
-   int i;
+   int i, currentIndex;
    for (i=0; i<currentReceiverWindowSize && i<nbPktToSend; i++)
    {
+      currentIndex = (firstBufIndex+i)%MAX_PACKETS_PREPARED;
+
       //---- Check timer (at the same index in bufPktSentTimers) is over before sending ----
       //rem : if pkt has not been sent yet, its sending time will be 0 => isTimerOver == true
-      if (!isTimerOver(bufPktSentTimers[firstBufIndex+i]))
+      if (!isTimerOver(bufPktSentTimers[currentIndex]))
          continue;
+
+      DEBUG_FINE("Sending data packet on socket");
 
       //---- Create raw data buf from the i_th packet in the sending window --------
       uint8_t* tmpBufRawPkt = malloc(MAX_PKT_SIZE);
@@ -205,7 +205,7 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
 
       //Encode packet and check return values
       pkt_status_code err;
-      if ((err = pkt_encode(bufPktToSend[firstBufIndex+i], tmpBufRawPkt, &lengthTmpBuf)) != PKT_OK)
+      if ((err = pkt_encode(bufPktToSend[currentIndex], tmpBufRawPkt, &lengthTmpBuf)) != PKT_OK)
       {
          ERROR("Couldn't encode the data packet to send");
          switch (err)
@@ -225,7 +225,7 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
       }
 
       //---- Send packet on socket ------
-      fprintf(stderr, "Send data on the socket (pkt #%d)\n", pkt_get_seqnum(bufPktToSend[firstBufIndex+i]));
+      fprintf(stderr, "Send data on the socket (pkt #%d)\n", pkt_get_seqnum(bufPktToSend[currentIndex]));
       if (sendto(sfd, tmpBufRawPkt, lengthTmpBuf, 0, NULL, 0) != lengthTmpBuf)
       {
          perror("Couldn't write a data packet on the socket");
@@ -235,10 +235,10 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
       free(tmpBufRawPkt);
 
       //---------- Reset timer ----------
-      gettimeofday(&(bufPktSentTimers[firstBufIndex+i]), NULL);
+      gettimeofday(&(bufPktSentTimers[currentIndex]), NULL);
 
       //-------- Check if sent packet is EOF packet --------------
-      if (pkt_get_length(bufPktToSend[firstBufIndex+i]) == 0)
+      if (pkt_get_length(bufPktToSend[currentIndex]) == 0)
          EOFPktSent = true;
    }
 
