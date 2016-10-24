@@ -34,16 +34,16 @@ pkt_t* createNewAck();
 ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt);
 
 /*
- * If the buffer containing acknowledments to be sent is not empty,
- * sends the acknowledgments on the socket @sfd
- * Deletes every acknowledgments sent except the last one
+ * If @acknowledgmentToSend != NULL and timer is over, sends the acknowledgments on the socket @sfd
+ * Deletes the last acknowledgment if EOF has been received
  */
-ERR_CODE sendAckFromBuffer(const int sfd);
+ERR_CODE sendAckIfPossible(const int sfd);
 
 /*
- * Sends the first acknowledgment in the buffer on @sfd
+ * Sends @acknowledgmentToSend on sfd
+ * Resets timer
  */
-ERR_CODE sendFirstAckFromBuffer(const int sfd);
+ERR_CODE sendAck(const int sfd);
 
 /*
  * If there's something to write in the buffer containing packets in sequence,
@@ -64,7 +64,7 @@ void checkOutOfSequencePkt();
 bool stillSomethingToWrite();
 
 /*
- * Deletes every packets in @acknowledgmentsToSend, @dataPktInSequence and @bufOutOfSequencePkt
+ * Deletes every packets in @acknowledgmentToSend, @dataPktInSequence and @bufOutOfSequencePkt
  * Inteded to be called when exiting program
  * WARNING : there's a function with the same signature in senderManagePackets.h/c
  */

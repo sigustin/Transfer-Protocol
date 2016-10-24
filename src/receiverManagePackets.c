@@ -2,10 +2,8 @@
 
 extern bool EOFPktReceived;
 
-pkt_t* acknowledgmentsToSend[MAX_PACKETS_PREPARED] = {NULL};//buffer containing the acknowledments to be send by receiverReadWriteLoop
-int indexFirstAckToSend = 0, nbAckToSend = 0;
+pkt_t* acknowledgmentToSend = NULL;//The next acknowledgment to be send by receiverReadWriteLoop (can be overwritten by a more recent one)
 struct timeval timerAckSent;
-int lastAckSeqnum = -1;
 
 pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED] = {NULL};//will contain the packets received in sequence and that have to be written on the output file
 int indexFirstDataPkt = 0, nbDataPktToWrite = 0;
@@ -173,24 +171,19 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             printDataPktOutOfSequenceBuf();
          }
 
-         if (nbAckToSend+1 < MAX_PACKETS_PREPARED)
+         //--------- Prepare new ack to send ----------------------
+         pkt_t* newAck = createNewAck();
+         if (newAck == NULL)
          {
-            //--------- Prepare ack and put it in buffer to send ----------------------
-            pkt_t* newAck = createNewAck();
-            if (newAck == NULL)
-            {
-               ERROR("Couldn't create new acknowledgment");
-               return RETURN_FAILURE;
-            }
+            ERROR("Couldn't create new acknowledgment");
+            return RETURN_FAILURE;
+         }
 
-            acknowledgmentsToSend[(indexFirstAckToSend+nbAckToSend)%MAX_PACKETS_PREPARED] = newAck;
-            nbAckToSend++;
-         }
-         else
-         {
-            ERROR("Tried to make new acknowledgment while buffer of acknowledgments to send is full");
-            //remove first ack from list or wait for them to be sent?
-         }
+         if (acknowledgmentToSend != NULL)
+            pkt_del(acknowledgmentToSend);
+         acknowledgmentToSend = newAck;
+
+         fprintf(stderr, "Ack prepared with seqnum : %d\n", pkt_get_seqnum(acknowledgmentToSend));
       }
    }
 
@@ -361,7 +354,7 @@ ERR_CODE putOutOfSequencePktInBuf(pkt_t* dataPkt)
    return RETURN_SUCCESS;
 }
 
-ERR_CODE sendAckFromBuffer(const int sfd)
+ERR_CODE sendAckIfPossible(const int sfd)
 {
    //Initializing timer
    static bool firstSending = true;
@@ -371,85 +364,60 @@ ERR_CODE sendAckFromBuffer(const int sfd)
       firstSending = false;
    }
 
-   DEBUG_FINEST("Try to send ack");
-
    if (sfd < 0)
    {
       ERROR("Invalid socket file descriptor");
       return RETURN_FAILURE;
    }
 
-   if (nbAckToSend > 1)
+   if (isTimerOver(timerAckSent))//true also with a timer zeroed out
    {
-      while (nbAckToSend >= 1)
+      DEBUG_FINE("Timer over : send acknowledgment");
+
+      if (sendAck(sfd) != RETURN_SUCCESS)
       {
-         DEBUG_FINE("Send acknowledgment");
-
-         if (lastAckSeqnum != pkt_get_seqnum(acknowledgmentsToSend[indexFirstAckToSend]))
-         {
-            if (sendFirstAckFromBuffer(sfd) != RETURN_SUCCESS)
-               return RETURN_FAILURE;
-
-            //reset timer
-            gettimeofday(&timerAckSent, NULL);
-         }
-
-         if (nbAckToSend == 1)
-            break;
-
-         if (nbAckToSend > 1)
-         {
-            pkt_del(acknowledgmentsToSend[indexFirstAckToSend]);
-            acknowledgmentsToSend[indexFirstAckToSend] = NULL;
-            indexFirstAckToSend++;
-            nbAckToSend--;
-         }
-      }
-   }
-   else//nbAckToSend == 1
-   {
-      if (isTimerOver(timerAckSent))//true also with a timer zeroed out
-      {
-         DEBUG_FINE("Send acknowledgment");
-
-         if (sendFirstAckFromBuffer(sfd) != RETURN_SUCCESS)
-            return RETURN_FAILURE;
-
-         //reset timer
-         gettimeofday(&timerAckSent, NULL);
+         ERROR("Couldn't send acknowledgment");
+         return RETURN_FAILURE;
       }
    }
 
-   if (EOFPktReceived)//last acknowledgment has been sent at least once
+   if (EOFPktReceived)
    {
-      //delete last acknowledgment
-      pkt_del(acknowledgmentsToSend[indexFirstAckToSend]);
-      acknowledgmentsToSend[indexFirstAckToSend] = NULL;
-      indexFirstAckToSend++;
-      nbAckToSend--;
+      DEBUG_FINE("Sending and deleting last acknowledgment");
+
+      if (sendAck(sfd) != RETURN_SUCCESS)
+      {
+         ERROR("Couldn't send acknowledgment");
+         return RETURN_FAILURE;
+      }
+
+      //delete acknowledgment
+      pkt_del(acknowledgmentToSend);
+      acknowledgmentToSend = NULL;
    }
 
    return RETURN_SUCCESS;
 }
 
-ERR_CODE sendFirstAckFromBuffer(const int sfd)
+ERR_CODE sendAck(const int sfd)
 {
    if (sfd < 0)
    {
       ERROR("Invalid socket file descriptor");
       return RETURN_FAILURE;
    }
-   if (nbAckToSend <= 0)
+   if (acknowledgmentToSend == NULL)
    {
-      ERROR("Tried to send no acknowledgment");
+      ERROR("Tried to send no acknowledgment on socket");
       return RETURN_FAILURE;
    }
 
-   uint8_t* rawAckToSend = malloc(HEADER_SIZE);//no payload in acknowledments
+   //--------------- Encode raw acknowledgment to be sent --------------------------
+   uint8_t* rawAckToSend = malloc(HEADER_SIZE);//no payload in acknowledgments
    size_t lengthAck = HEADER_SIZE;
 
    pkt_status_code err;
-   if ((err = pkt_encode(acknowledgmentsToSend[indexFirstAckToSend], rawAckToSend, &lengthAck)) != PKT_OK)
+   if ((err = pkt_encode(acknowledgmentToSend, rawAckToSend, &lengthAck)) != PKT_OK)
    {
       //Check return value
       ERROR("Couldn't encode the acknowledgment to be sent");
@@ -470,23 +438,26 @@ ERR_CODE sendFirstAckFromBuffer(const int sfd)
    }
    if (lengthAck != HEADER_SIZE)
    {
-      ERROR("Couldn't encode the full acknowledment to be sent");
+      ERROR("Couldn't encode the full acknowledgment to be sent");
       free(rawAckToSend);
       return RETURN_FAILURE;
    }
 
-   fprintf(stderr, "Acknowledgment has seqnum : %d\n", pkt_get_seqnum(acknowledgmentsToSend[indexFirstAckToSend]));
+   //DEBUG
+   fprintf(stderr, "Acknowledgment has seqnum : %d\n", pkt_get_seqnum(acknowledgmentToSend));
 
+   //--------------------- Send acknowledgment -----------------------
    if (sendto(sfd, rawAckToSend, lengthAck, 0, NULL, 0) != lengthAck)
    {
-      ERROR("Couldn't write acknowledment on socket");
+      ERROR("Couldn't write acknowledgment on socket");
       free(rawAckToSend);
       return RETURN_FAILURE;
    }
 
-   lastAckSeqnum = pkt_get_seqnum(acknowledgmentsToSend[indexFirstAckToSend]);
-
    free(rawAckToSend);
+
+   //------------ Reset timer ---------------------
+   gettimeofday(&timerAckSent, NULL);
 
    return RETURN_SUCCESS;
 }
@@ -567,15 +538,11 @@ void checkOutOfSequencePkt()
 
 bool stillSomethingToWrite()
 {
-   return (nbDataPktToWrite > 0) || (nbAckToSend > 0);
+   return (nbDataPktToWrite > 0);
 }
 
 void purgeBuffers()
 {
-   if (nbAckToSend > 0)
-   {
-      WARNING("Purging not empty buffer of acknowledgments to send");
-   }
    if (nbDataPktToWrite > 0)
    {
       WARNING("Purging not empty buffer of data packets to write on output file");
@@ -585,11 +552,15 @@ void purgeBuffers()
       WARNING("Purging not empty buffer of out-of-sequence data packets");
    }
 
+   if (acknowledgmentToSend != NULL)
+   {
+      pkt_del(acknowledgmentToSend);
+      acknowledgmentToSend = NULL;
+   }
+
    int i;
    for (i=0; i<MAX_PACKETS_PREPARED; i++)
    {
-      if (acknowledgmentsToSend[i] != NULL)
-         pkt_del(acknowledgmentsToSend[i]);
       if (dataPktInSequence[i] != NULL)
          pkt_del(dataPktInSequence[i]);
    }

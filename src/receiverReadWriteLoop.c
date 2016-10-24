@@ -108,7 +108,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
       {
          DEBUG_FINEST("Trying to write on socket (if there's an acknowledment to write)")
 
-         if (sendAckFromBuffer(sfd) != RETURN_SUCCESS)
+         if (sendAck(sfd) != RETURN_SUCCESS)
          {
             ERROR("Couldn't send acknowledgments on socket");
             purgeBuffers();
