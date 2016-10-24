@@ -206,40 +206,107 @@ pkt_t* createNewAck()
       return NULL;
    }
 
-   //TODO switch on return values
-   if (pkt_set_type(ack, PTYPE_ACK) != PKT_OK)
+   //Making the new acknowledgment packet and checking for err values
+   pkt_status_code err;
+   if ((err = pkt_set_type(ack, PTYPE_ACK)) != PKT_OK)
    {
       ERROR("Couldn't set new acknowledgment's type");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet was inconsistent");
+            break;
+         case E_TYPE:
+            ERROR("Tried to set to invalid type");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(ack);
       return NULL;
    }
-   if (pkt_set_window(ack, (uint8_t) MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf) != PKT_OK)
+   if ((err = pkt_set_window(ack, (uint8_t) MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf)) != PKT_OK)
    {
       ERROR("Couldn't set new acknowledgment's window");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         case E_WINDOW:
+            ERROR("Tried to set the window to a too big size");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(ack);
       return NULL;
    }
-   if (pkt_set_seqnum(ack, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM) != PKT_OK)//the seqnum of the next packet that the sender must send
+   if ((err = pkt_set_seqnum(ack, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM)) != PKT_OK)//the seqnum of the next packet that the sender must send
    {
       ERROR("Couldn't set new acknowledgment's sequence number");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(ack);
       return NULL;
    }
-   if (pkt_set_length(ack, 0) != PKT_OK)
+   if ((err = pkt_set_length(ack, 0)) != PKT_OK)
    {
       ERROR("Couldn't set new acknowledgment's payload length");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         case E_LENGTH:
+            ERROR("Tried to set payload length to a too big length");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(ack);
       return NULL;
    }
-   if (pkt_set_timestamp(ack, lastTimestampReceived) != PKT_OK)
+   if ((err = pkt_set_timestamp(ack, lastTimestampReceived)) != PKT_OK)
    {
       ERROR("Couldn't set new acknowledgment's timestamp");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(ack);
       return NULL;
    }
-   if (pkt_set_payload(ack, NULL, 0) != PKT_OK)//sets crc
+   if ((err = pkt_set_payload(ack, NULL, 0)) != PKT_OK)//sets crc
    {
       ERROR("Couldn't set acknowledgment's crc");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent")
+            break;
+         case E_LENGTH:
+            ERROR("Tried to set a payload with a too big length");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(ack);
       return NULL;
    }
@@ -381,10 +448,23 @@ ERR_CODE sendFirstAckFromBuffer(const int sfd)
    uint8_t* rawAckToSend = malloc(HEADER_SIZE);//no payload in acknowledments
    size_t lengthAck = HEADER_SIZE;
 
-   if (pkt_encode(acknowledgmentsToSend[indexFirstAckToSend], rawAckToSend, &lengthAck) != PKT_OK)
+   pkt_status_code err;
+   if ((err = pkt_encode(acknowledgmentsToSend[indexFirstAckToSend], rawAckToSend, &lengthAck)) != PKT_OK)
    {
-      //TODO switch on return value
+      //Check return value
       ERROR("Couldn't encode the acknowledgment to be sent");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         case E_NOMEM:
+            ERROR("Tried to encode the acknowledgment to send in a too small buffer");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       free(rawAckToSend);
       return RETURN_FAILURE;
    }
