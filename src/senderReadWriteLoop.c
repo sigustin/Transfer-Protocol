@@ -95,7 +95,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
                   if (putNewPktInBufferToSend(newDataPkt) != RETURN_SUCCESS)
                   {
                      ERROR("Couldn't put new packet in buffer");
-                     //TODO wait for buffer to be ready
+                     
                      stopTryingToReadInput = true;
                      savedNewPktData = newDataPkt;
                   }

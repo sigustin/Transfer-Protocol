@@ -94,7 +94,7 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             break;
       }
 
-      //TODO ask to send the packet again or ignore?
+      //discard packet
       pkt_del(pktReceived);
       return RETURN_FAILURE;
    }
@@ -163,8 +163,12 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
             DEBUG_FINE("Data packet out-of-sequence -> putting it in buffer out-of-sequence");
             fprintf(stderr, "last seqnum received in sequence : %d\tnext to be received : %d\treceived : %d (ptr : %p)\n", lastSeqnumReceivedInOrder, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM, seqnum, pktReceived);
             //---------- Check if seqnum is in the window and put it in the buffer if it is ------------------
-            //TODO check return value
-            putOutOfSequencePktInBuf(pktReceived);
+            if (putOutOfSequencePktInBuf(pktReceived) != RETURN_SUCCESS)
+            {
+               ERROR("Couldn't put packet in out-of-sequence buffer");
+               pkt_del(pktReceived);
+               return RETURN_FAILURE;
+            }
 
             printDataPktOutOfSequenceBuf();
          }
@@ -202,13 +206,43 @@ pkt_t* createNewAck()
       return NULL;
    }
 
-   //TODO check return values
-   pkt_set_type(ack, PTYPE_ACK);
-   pkt_set_window(ack, (uint8_t) MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf);
-   pkt_set_seqnum(ack, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM);//the seqnum of the next packet that the sender must send
-   pkt_set_length(ack, 0);
-   pkt_set_timestamp(ack, lastTimestampReceived);
-   pkt_set_payload(ack, NULL, 0);//sets crc
+   //TODO switch on return values
+   if (pkt_set_type(ack, PTYPE_ACK) != PKT_OK)
+   {
+      ERROR("Couldn't set new acknowledgment's type");
+      pkt_del(ack);
+      return NULL;
+   }
+   if (pkt_set_window(ack, (uint8_t) MAX_WINDOW_SIZE-nbPktOutOfSequenceInBuf) != PKT_OK)
+   {
+      ERROR("Couldn't set new acknowledgment's window");
+      pkt_del(ack);
+      return NULL;
+   }
+   if (pkt_set_seqnum(ack, (lastSeqnumReceivedInOrder+1)%NB_DIFFERENT_SEQNUM) != PKT_OK)//the seqnum of the next packet that the sender must send
+   {
+      ERROR("Couldn't set new acknowledgment's sequence number");
+      pkt_del(ack);
+      return NULL;
+   }
+   if (pkt_set_length(ack, 0) != PKT_OK)
+   {
+      ERROR("Couldn't set new acknowledgment's payload length");
+      pkt_del(ack);
+      return NULL;
+   }
+   if (pkt_set_timestamp(ack, lastTimestampReceived) != PKT_OK)
+   {
+      ERROR("Couldn't set new acknowledgment's timestamp");
+      pkt_del(ack);
+      return NULL;
+   }
+   if (pkt_set_payload(ack, NULL, 0) != PKT_OK)//sets crc
+   {
+      ERROR("Couldn't set acknowledgment's crc");
+      pkt_del(ack);
+      return NULL;
+   }
 
    return ack;
 }
@@ -280,8 +314,6 @@ ERR_CODE sendAckFromBuffer(const int sfd)
 
    if (nbAckToSend > 1)
    {
-      //BUG sent once too many times (ack #x has been sent -maybe multiple times- and must be sent again before being deleted)
-      //send all acknowledgments and remove them except the last one
       while (nbAckToSend >= 1)
       {
          DEBUG_FINE("Send acknowledgment");
@@ -348,8 +380,14 @@ ERR_CODE sendFirstAckFromBuffer(const int sfd)
 
    uint8_t* rawAckToSend = malloc(HEADER_SIZE);//no payload in acknowledments
    size_t lengthAck = HEADER_SIZE;
-   //TODO check return value
-   pkt_encode(acknowledgmentsToSend[indexFirstAckToSend], rawAckToSend, &lengthAck);
+
+   if (pkt_encode(acknowledgmentsToSend[indexFirstAckToSend], rawAckToSend, &lengthAck) != PKT_OK)
+   {
+      //TODO switch on return value
+      ERROR("Couldn't encode the acknowledgment to be sent");
+      free(rawAckToSend);
+      return RETURN_FAILURE;
+   }
    if (lengthAck != HEADER_SIZE)
    {
       ERROR("Couldn't encode the full acknowledment to be sent");

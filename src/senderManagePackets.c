@@ -28,14 +28,44 @@ pkt_t* createDataPkt(const uint8_t* payload, uint16_t length)
       return NULL;
    }
 
-   //TODO test return values
-   pkt_set_type(pkt, PTYPE_DATA);
-   pkt_set_window(pkt, currentReceiverWindowSize);
-   pkt_set_seqnum(pkt, currentSeqnum);
+   //TODO switch on return values
+   if (pkt_set_type(pkt, PTYPE_DATA) != PKT_OK)
+   {
+      ERROR("Couldn't set new data packet's type");
+      pkt_del(pkt);
+      return NULL;
+   }
+   if (pkt_set_window(pkt, currentReceiverWindowSize) != PKT_OK)
+   {
+      ERROR("Couldn't set new data packet's window");
+      pkt_del(pkt);
+      return NULL;
+   }
+   if (pkt_set_seqnum(pkt, currentSeqnum) != PKT_OK)
+   {
+      ERROR("Couldn't set new data packet's sequence number");
+      pkt_del(pkt);
+      return NULL;
+   }
    currentSeqnum++;//255++ == 0 since it's a uint8_t
-   pkt_set_length(pkt, length);
-   pkt_set_timestamp(pkt, 0);//TODO
-   pkt_set_payload(pkt, payload, length);//crc is computed and put in pkt
+   if (pkt_set_length(pkt, length) != PKT_OK)
+   {
+      ERROR("Couldn't set new data packet's payload length");
+      pkt_del(pkt);
+      return NULL;
+   }
+   if (pkt_set_timestamp(pkt, 0) != PKT_OK)//TODO
+   {
+      ERROR("Couldn't set new data packet's timestamp");
+      pkt_del(pkt);
+      return NULL;
+   }
+   if (pkt_set_payload(pkt, payload, length) != PKT_OK)//crc is computed and put in pkt
+   {
+      ERROR("Couldn't set new data packet's payload and crc");
+      pkt_del(pkt);
+      return NULL;
+   }
 
    return pkt;
 }
@@ -106,14 +136,20 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
       uint8_t* tmpBufRawPkt = malloc(MAX_PKT_SIZE);
       size_t lengthTmpBuf = MAX_PKT_SIZE;
 
-      //TODO test return value
-      pkt_encode(bufPktToSend[firstBufIndex+i], tmpBufRawPkt, &lengthTmpBuf);
+      //TODO switch on return value
+      if (pkt_encode(bufPktToSend[firstBufIndex+i], tmpBufRawPkt, &lengthTmpBuf) != PKT_OK)
+      {
+         ERROR("Couldn't encode the data packet to send");
+         free(tmpBufRawPkt);
+         return RETURN_FAILURE;
+      }
 
       //---- Send packet on socket ------
       fprintf(stderr, "Send data on the socket (pkt #%d)\n", pkt_get_seqnum(bufPktToSend[firstBufIndex+i]));
       if (sendto(sfd, tmpBufRawPkt, lengthTmpBuf, 0, NULL, 0) != lengthTmpBuf)
       {
          perror("Couldn't write a data packet on the socket");
+         free(tmpBufRawPkt);
          return RETURN_FAILURE;
       }
       free(tmpBufRawPkt);
