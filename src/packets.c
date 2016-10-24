@@ -114,7 +114,7 @@ pkt_status_code pkt_encode(const pkt_t* pkt, uint8_t *buf, size_t *len)
 	buf[1] = pkt->sequenceNb;
 	putUInt16(pkt->payloadLength, &buf[2]);
 	putUInt32(pkt->timestamp, &buf[4]);//doesn't pass inginious tests without changing the byte-order
-	
+
 	int i;
 	for (i=0; i<pkt->payloadLength; i++)
 		buf[i+8] = pkt->payload[i];
@@ -242,6 +242,8 @@ pkt_status_code pkt_set_payload(pkt_t *pkt, const uint8_t *data, const uint16_t 
 {
 	if (pkt == NULL)
 		return E_INCONSISTENT;
+	if (length > MAX_PAYLOAD_SIZE)
+		return E_LENGTH;
 	if (data == NULL || length == 0)
 	{
 		uint8_t* headerRaw = malloc(8);
