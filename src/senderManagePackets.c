@@ -28,41 +28,108 @@ pkt_t* createDataPkt(const uint8_t* payload, uint16_t length)
       return NULL;
    }
 
-   //TODO switch on return values
-   if (pkt_set_type(pkt, PTYPE_DATA) != PKT_OK)
+   //Making new packet andd testing return error values
+   pkt_status_code err;
+   if ((err = pkt_set_type(pkt, PTYPE_DATA)) != PKT_OK)
    {
       ERROR("Couldn't set new data packet's type");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet was inconsistent");
+            break;
+         case E_TYPE:
+            ERROR("Tried to set to invalid type");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(pkt);
       return NULL;
    }
-   if (pkt_set_window(pkt, currentReceiverWindowSize) != PKT_OK)
+   if ((err = pkt_set_window(pkt, currentReceiverWindowSize)) != PKT_OK)
    {
       ERROR("Couldn't set new data packet's window");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         case E_WINDOW:
+            ERROR("Tried to set the window to a too big size");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(pkt);
       return NULL;
    }
-   if (pkt_set_seqnum(pkt, currentSeqnum) != PKT_OK)
+   if ((err = pkt_set_seqnum(pkt, currentSeqnum)) != PKT_OK)
    {
       ERROR("Couldn't set new data packet's sequence number");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(pkt);
       return NULL;
    }
    currentSeqnum++;//255++ == 0 since it's a uint8_t
-   if (pkt_set_length(pkt, length) != PKT_OK)
+   if ((err = pkt_set_length(pkt, length)) != PKT_OK)
    {
       ERROR("Couldn't set new data packet's payload length");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         case E_LENGTH:
+            ERROR("Tried to set payload length to a too big length");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(pkt);
       return NULL;
    }
-   if (pkt_set_timestamp(pkt, 0) != PKT_OK)//TODO
+   if ((err = pkt_set_timestamp(pkt, 0)) != PKT_OK)//TODO
    {
       ERROR("Couldn't set new data packet's timestamp");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(pkt);
       return NULL;
    }
-   if (pkt_set_payload(pkt, payload, length) != PKT_OK)//crc is computed and put in pkt
+   if ((err = pkt_set_payload(pkt, payload, length)) != PKT_OK)//crc is computed and put in pkt
    {
       ERROR("Couldn't set new data packet's payload and crc");
+      switch (err)
+      {
+         case E_INCONSISTENT:
+            ERROR("Packet is inconsistent")
+            break;
+         case E_LENGTH:
+            ERROR("Tried to set a payload with a too big length");
+            break;
+         default:
+            ERROR("An undefined error occured");
+            break;
+      }
       pkt_del(pkt);
       return NULL;
    }
@@ -136,10 +203,23 @@ ERR_CODE sendDataPktFromBuffer(const int sfd)
       uint8_t* tmpBufRawPkt = malloc(MAX_PKT_SIZE);
       size_t lengthTmpBuf = MAX_PKT_SIZE;
 
-      //TODO switch on return value
-      if (pkt_encode(bufPktToSend[firstBufIndex+i], tmpBufRawPkt, &lengthTmpBuf) != PKT_OK)
+      //Encode packet and check return values
+      pkt_status_code err;
+      if ((err = pkt_encode(bufPktToSend[firstBufIndex+i], tmpBufRawPkt, &lengthTmpBuf)) != PKT_OK)
       {
          ERROR("Couldn't encode the data packet to send");
+         switch (err)
+         {
+            case E_INCONSISTENT:
+               ERROR("Packet is inconsistent");
+               break;
+            case E_NOMEM:
+               ERROR("Tried to encode a data packet in a too small buffer");
+               break;
+            default:
+               ERROR("An undefined error occured");
+               break;
+         }
          free(tmpBufRawPkt);
          return RETURN_FAILURE;
       }
