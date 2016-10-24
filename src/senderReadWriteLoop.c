@@ -95,7 +95,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
                   if (putNewPktInBufferToSend(newDataPkt) != RETURN_SUCCESS)
                   {
                      ERROR("Couldn't put new packet in buffer");
-                     
+
                      stopTryingToReadInput = true;
                      savedNewPktData = newDataPkt;
                   }
@@ -129,14 +129,15 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
          {
             if (stopTryingToReadInput)
             {
-               stopTryingToReadInput = false;
                if (putNewPktInBufferToSend(savedNewPktData) != RETURN_SUCCESS)
                {
-                  ERROR("There is a problem with the buffer of packets to send (full when it shouldn't be)");
-                  purgeBuffers();
-                  return RETURN_FAILURE;
+                  WARNING("Buffer of packets to send full");
                }
-               savedNewPktData = NULL;
+               else
+               {
+                  stopTryingToReadInput = false;
+                  savedNewPktData = NULL;
+               }
             }
          }
       }

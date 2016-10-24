@@ -27,7 +27,7 @@ pkt_t* createDataPkt(const uint8_t* payload, uint16_t length);
 /*
  * Puts @dataPkt in the buffer of packets ready to be send
  * @return :   RETURN_SUCCESS if there was no error
- *             RETURN_FAILURE if the buffer was full
+ *             RETURN_FAILURE if the buffer was full or @dataPkt == NULL
  */
 ERR_CODE putNewPktInBufferToSend(pkt_t* dataPkt);
 
