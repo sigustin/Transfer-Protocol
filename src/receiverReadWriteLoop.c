@@ -37,6 +37,8 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
 
    while (!EOFPktReceived || stillSomethingToWrite())
    {
+      fprintf(stderr, "[LOOP]\n");
+
       if (!EOFPktReceived)
       {
          //================== Read socket ====================
@@ -115,6 +117,8 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
             return RETURN_FAILURE;
          }
       }
+      else
+      {DEBUG_FINE("Can't write on socket for the moment");}
    }
 
    DEBUG("Exit normally : last packet received and nothing more to write or acknowledge :)");

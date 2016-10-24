@@ -44,6 +44,8 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 
    while (!EOFPktAck)
    {
+      fprintf(stderr, "[LOOP]\n");
+
       if (!EOFRead && !stopTryingToReadInput)
       {
          //================= Read input file (make new data packet) =========================
@@ -141,6 +143,8 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
             }
          }
       }
+      else
+      {DEBUG_FINE("Can't write on socket for the moment");}
 
       //=================== Read socket (ack) ========================================
       copyFdSet = socketFdSet;
@@ -164,7 +168,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
             return RETURN_FAILURE;
          }
          else if (bytesRead == 0)
-         {}//Received EOF from socket (possible?)
+         {DEBUG_FINE("no ack");}//Received EOF from socket (possible?)
          else
          {
             //Decode data, check packet and update FIFO buffer of packets to send

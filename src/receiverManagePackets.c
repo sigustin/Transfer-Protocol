@@ -4,6 +4,7 @@ extern bool EOFPktReceived;
 
 pkt_t* acknowledgmentToSend = NULL;//The next acknowledgment to be send by receiverReadWriteLoop (can be overwritten by a more recent one)
 struct timeval timerAckSent;
+bool newAckToSend = false;//Send @acknowledgmentToSend when this is true (a new acknowledgment can be send and hasn't been sent yet)
 
 pkt_t* dataPktInSequence[MAX_PACKETS_PREPARED] = {NULL};//will contain the packets received in sequence and that have to be written on the output file
 int indexFirstDataPkt = 0, nbDataPktToWrite = 0;
@@ -182,6 +183,11 @@ ERR_CODE receiveDataPacket(const uint8_t* data, int length)
          if (acknowledgmentToSend != NULL)
             pkt_del(acknowledgmentToSend);
          acknowledgmentToSend = newAck;
+
+         //Reset timer
+         gettimeofday(&timerAckSent, NULL);
+
+         newAckToSend = true;
 
          fprintf(stderr, "Ack prepared with seqnum : %d\n", pkt_get_seqnum(acknowledgmentToSend));
       }
@@ -370,7 +376,7 @@ ERR_CODE sendAckIfPossible(const int sfd)
       return RETURN_FAILURE;
    }
 
-   if (isTimerOver(timerAckSent))//true also with a timer zeroed out
+   if (newAckToSend || isTimerOver(timerAckSent))//true also with a timer zeroed out
    {
       DEBUG_FINE("Timer over : send acknowledgment");
 
@@ -379,21 +385,17 @@ ERR_CODE sendAckIfPossible(const int sfd)
          ERROR("Couldn't send acknowledgment");
          return RETURN_FAILURE;
       }
-   }
 
-   if (EOFPktReceived)
-   {
-      DEBUG_FINE("Sending and deleting last acknowledgment");
+      newAckToSend = false;
 
-      if (sendAck(sfd) != RETURN_SUCCESS)
+      if (EOFPktReceived)
       {
-         ERROR("Couldn't send acknowledgment");
-         return RETURN_FAILURE;
-      }
+         DEBUG_FINE("Sending and deleting last acknowledgment");
 
-      //delete acknowledgment
-      pkt_del(acknowledgmentToSend);
-      acknowledgmentToSend = NULL;
+         //delete acknowledgment
+         pkt_del(acknowledgmentToSend);
+         acknowledgmentToSend = NULL;
+      }
    }
 
    return RETURN_SUCCESS;
@@ -444,7 +446,7 @@ ERR_CODE sendAck(const int sfd)
    }
 
    //DEBUG
-   fprintf(stderr, "Acknowledgment has seqnum : %d\n", pkt_get_seqnum(acknowledgmentToSend));
+   fprintf(stderr, "Acknowledgment sent has seqnum : %d (window : %d)\n", pkt_get_seqnum(acknowledgmentToSend), pkt_get_window(acknowledgmentToSend));
 
    //--------------------- Send acknowledgment -----------------------
    if (sendto(sfd, rawAckToSend, lengthAck, 0, NULL, 0) != lengthAck)

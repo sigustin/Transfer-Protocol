@@ -301,7 +301,7 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
          currentReceiverWindowSize = pkt_get_window(&pktReceived);
 
          uint8_t seqnum = pkt_get_seqnum(&pktReceived);
-         fprintf(stderr, "Acknowledgment has seqnum : %d\n", seqnum);
+         fprintf(stderr, "Acknowledgment received has seqnum : %d (window : %d)\n", seqnum, pkt_get_window(&pktReceived));
          removeDataPktFromBuffer(seqnum);
       }
    }
