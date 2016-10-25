@@ -5,6 +5,8 @@ rm -f received.txt stderr.txt link.log received.gif
 
 echo "Making executables"
 make -C ..
+make -C ../LINGI1341-linksim
+cp ../LINGI1341-linksim/link_sim ../link_sim
 
 echo "Test #1 : transfer of file.txt -> received.txt with perfect network"
 ../receiver :: 1025 -f received.txt 2> stderr.txt &
@@ -84,7 +86,7 @@ echo "Test #8 : transfer of bigImage.gif -> received.gif with bad network in bot
 ../link_sim -p 1025 -P 1026 -R -j 500 -l 1 -e 1 &> link.log &
 link_pid=$!
 ../receiver :: 1026 -f received.gif 2> stderr.txt &
-../sender ::1 1025 -f file.txt 2> stderr.txt
+../sender ::1 1025 -f bigImage.txt 2> stderr.txt
 
 kill -9 $link_pid &> /dev/null
 echo "Test #8 over"
