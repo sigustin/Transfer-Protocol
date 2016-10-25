@@ -37,7 +37,7 @@ ERR_CODE receiverReadWriteLoop(const int sfd, const int outputFile)
 
    while (!EOFPktReceived || stillSomethingToWrite())
    {
-      fprintf(stderr, "[LOOP]\n");
+      //fprintf(stderr, "[LOOP]\n");
 
       if (!EOFPktReceived)
       {

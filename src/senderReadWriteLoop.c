@@ -44,7 +44,7 @@ ERR_CODE senderReadWriteLoop(const int sfd, const int inputFile)
 
    while (!EOFPktAck)
    {
-      fprintf(stderr, "[LOOP]\n");
+      //fprintf(stderr, "[LOOP]\n");
 
       if (!EOFRead && !stopTryingToReadInput)
       {

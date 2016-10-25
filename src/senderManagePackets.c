@@ -282,7 +282,6 @@ ERR_CODE receiveAck(const uint8_t* data, uint16_t length)
             break;
       }
 
-      pkt_del(&pktReceived);
       return RETURN_FAILURE;
    }
    else//Valid pkt
