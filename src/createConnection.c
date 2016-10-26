@@ -13,13 +13,39 @@ const char * real_address(const char *address, struct sockaddr_in6 *rval)
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = AI_PASSIVE;
+	//hints.ai_flags = AI_PASSIVE;
 
 	int err = getaddrinfo(address, NULL, &hints, &tmpAddrInfo);
 	if (err != 0)
 	{
 		perror("Couldn't resolve address");
-		return "Couldn't resolve address";
+		switch (err)
+		{
+			/*case EAI_ADDRFAMILY:
+				return "the specified network host does not have any network addresses in the requested address family.";*/
+			case EAI_AGAIN:
+				return "the name server returned a temporary failure indication. Try again later.";
+			case EAI_BADFLAGS:
+				return "hints.ai_flags contains invalid flags ; or, hints.ai_flags included AI_CANONNAME and name was NULL.";
+			case EAI_FAIL:
+				return "the name server returned a permanent failure indication.";
+			case EAI_FAMILY:
+				return "the requested address family is not supported.";
+			case EAI_MEMORY:
+				return "out of memory.";
+			/*case EAI_NODATA:
+				return "the specified network host exists, but does not have any network addresses defined.";*/
+			case EAI_NONAME:
+				return "the node or service is not known ;  or both are NULL.";
+			case EAI_SERVICE:
+				return "the requested sevice is not available for the requesed socket type.";
+			case EAI_SOCKTYPE:
+				return "the requested socket type is not supported.";
+			case EAI_SYSTEM:
+				return "other system error occured, check errno for details.";
+			default :
+				return "an undefined error occured.";
+		}
 	}
 
 	if (rval == NULL)
