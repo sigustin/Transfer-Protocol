@@ -163,7 +163,7 @@ ERR_CODE putNewPktInBufferToSend(pkt_t* dataPkt)
    }
 
    //DEBUG
-   printBuffer();
+   //printBuffer();
 
    return RETURN_SUCCESS;
 }

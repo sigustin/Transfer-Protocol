@@ -17,7 +17,7 @@
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "Running sender\n");
+	//fprintf(stderr, "Running sender\n");
 
 	//================== Check validity of the program's arguments =======================
 	if (argc < 3)
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	const char* errMsg = real_address(receiverHostname, &receiverAddress);
 	if (errMsg != NULL)
 	{
-		fprintf(stderr, "Couldn't resolve hostname %s :%s\n", receiverHostname, errMsg);
+		fprintf(stderr, "Couldn't resolve hostname %s : %s\n", receiverHostname, errMsg);
 		return EXIT_FAILURE;
 	}
 	DEBUG("Host name resolved");

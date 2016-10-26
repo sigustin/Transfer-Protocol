@@ -15,7 +15,7 @@
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "Running receiver\n");
+	//fprintf(stderr, "Running receiver\n");
 
 	//================= Check the validity of the program's arguments ===========================
 	if (argc < 3)
