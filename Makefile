@@ -5,6 +5,8 @@ PROG_SENDER = sender
 PROG_RECEIVER = receiver
 SRC = src
 
+.PHONY : all clean cleanall tests
+
 all : $(PROG_SENDER) $(PROG_RECEIVER)
 
 $(PROG_SENDER) : sender.o createConnection.o senderReadWriteLoop.o senderManagePackets.o packets.o timer.o
@@ -46,3 +48,6 @@ clean :
 cleanall : clean
 	@rm -f $(PROG_SENDER)
 	@rm -f $(PROG_RECEIVER)
+
+tests :
+	./tests/tests.sh
