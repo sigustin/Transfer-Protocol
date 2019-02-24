@@ -22,7 +22,7 @@ My collaborator helped me at the time with the feature design, architecture and 
 - Automate command execution using makefiles
 - Follow a (quite vague) protocol description close enough to make a protocol able of inter-operate with other protocols that follow the same guidelines
 
-## Files worth checking
+## Files worth checking out
 - The instructions (in French): [consignes.pdf](https://github.com/sigustin/Transfer-Protocol/blob/master/consignes.pdf)
 - The report explaining what we made (in French): [rapport.pdf](https://github.com/sigustin/Transfer-Protocol/blob/master/rapport.pdf)
 - The tests: [tests/tests.sh](https://github.com/sigustin/Transfer-Protocol/blob/master/tests/tests.sh)
